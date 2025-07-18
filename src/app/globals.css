@@ -2,10 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  --header-height: 80px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -18,12 +21,23 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
+  /* background: linear-gradient(
       to bottom,
       transparent,
       rgb(var(--background-end-rgb))
     )
-    rgb(var(--background-start-rgb));
+    rgb(var(--background-start-rgb)); */
+  background-color: #f8f6ff;
+  /* 연보라 파스텔톤 */
+  min-width: 1000px;
+}
+
+html {
+  min-width: 1000px;
+}
+
+#__next {
+  min-width: 1000px;
 }
 
 @layer utilities {

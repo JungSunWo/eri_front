@@ -1,0 +1,41 @@
+<svg width="896" height="330" viewBox="0 0 896 330" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="896" height="330" rx="16" fill="#F9FAEF"/>
+  <path d="M0 314C0 314 80 230 180 230C280 230 320 314 400 314C480 314 520 230 620 230C720 230 800 314 800 314" fill="#D6E7A3"/>
+  <ellipse cx="448" cy="314" rx="400" ry="40" fill="#C7DB8A"/>
+  <g>
+    <ellipse cx="448" cy="180" rx="120" ry="80" fill="#F9FAEF"/>
+    <g>
+      <path d="M370 200C370 170 410 150 448 150C486 150 526 170 526 200C526 230 486 250 448 250C410 250 370 230 370 200Z" fill="#FFD36B"/>
+      <ellipse cx="448" cy="200" rx="60" ry="40" fill="#FFB84C"/>
+      <ellipse cx="448" cy="200" rx="40" ry="20" fill="#FF8C42"/>
+    </g>
+    <g>
+      <ellipse cx="408" cy="180" rx="20" ry="30" fill="#F9FAEF"/>
+      <ellipse cx="488" cy="180" rx="20" ry="30" fill="#F9FAEF"/>
+    </g>
+    <g>
+      <ellipse cx="428" cy="210" rx="10" ry="15" fill="#F9FAEF"/>
+      <ellipse cx="468" cy="210" rx="10" ry="15" fill="#F9FAEF"/>
+    </g>
+    <g>
+      <ellipse cx="448" cy="230" rx="8" ry="5" fill="#F9FAEF"/>
+    </g>
+  </g>
+  <g>
+    <path d="M370 200C370 170 410 150 448 150C486 150 526 170 526 200C526 230 486 250 448 250C410 250 370 230 370 200Z" fill="#FFD36B"/>
+    <ellipse cx="448" cy="200" rx="60" ry="40" fill="#FFB84C"/>
+    <ellipse cx="448" cy="200" rx="40" ry="20" fill="#FF8C42"/>
+  </g>
+  <g>
+    <ellipse cx="408" cy="180" rx="20" ry="30" fill="#F9FAEF"/>
+    <ellipse cx="488" cy="180" rx="20" ry="30" fill="#F9FAEF"/>
+  </g>
+  <g>
+    <ellipse cx="428" cy="210" rx="10" ry="15" fill="#F9FAEF"/>
+    <ellipse cx="468" cy="210" rx="10" ry="15" fill="#F9FAEF"/>
+  </g>
+  <g>
+    <ellipse cx="448" cy="230" rx="8" ry="5" fill="#F9FAEF"/>
+  </g>
+  <!-- 실제 일러스트의 SVG path 및 요소는 여기에 추가되어야 합니다. -->
+</svg> 

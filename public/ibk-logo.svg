@@ -1,0 +1,9 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="8" width="240" height="240" rx="48" fill="#009FE3" stroke="#fff" stroke-width="16"/>
+  <path d="M64 64 Q128 128 64 192" stroke="#fff" stroke-width="16" fill="none"/>
+  <path d="M192 64 Q128 128 192 192" stroke="#0057A4" stroke-width="16" fill="none"/>
+  <text x="80" y="140" font-size="64" fill="#fff" font-family="Arial" font-weight="bold">I</text>
+  <text x="110" y="140" font-size="64" fill="#fff" font-family="Arial" font-weight="bold">D</text>
+  <text x="170" y="140" font-size="64" fill="#fff" font-family="Arial" font-weight="bold">K</text>
+  <polygon points="128,128 140,120 140,136" fill="#F15A29"/>
+</svg> 
