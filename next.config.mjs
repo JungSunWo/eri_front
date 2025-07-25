@@ -40,6 +40,16 @@ const nextConfig = {
     ];
   },
 
+  // API 프록시 설정
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8080/api/:path*',
+      },
+    ];
+  },
+
   // 리다이렉트 설정
   async redirects() {
     return [

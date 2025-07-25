@@ -13,10 +13,10 @@
 
 import { usePageMoveStore } from '@/common/store/pageMoveStore';
 import { CmpButton } from '@/components/button/cmp_button';
+import ConsultationButton from '@/components/ConsultationButton';
 import { useState } from 'react';
 
 import PageWrapper from '@/components/layout/PageWrapper';
-import Image from 'next/image';
 
 /**
  * 메인 페이지 컴포넌트
@@ -98,77 +98,78 @@ export default function MainPage() {
     return (
       <main className="flex-1 flex flex-col items-center justify-center text-center px-4 pb-12">
         {/* 메인 타이틀 및 서브타이틀 */}
-        <div className="mt-12 mb-8">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-green-800 mb-4">
-            {mainData.title}
-          </h1>
-          <p className="text-lg md:text-xl text-yellow-600 font-semibold">
-            {mainData.subtitle}
-          </p>
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">{mainData.title}</h1>
+          <p className="text-xl text-gray-600">{mainData.subtitle}</p>
         </div>
 
-        {/* 메인 일러스트 이미지 */}
-        <div className="flex justify-center mb-8">
-          <Image
-            src="/main-illustration.svg"
-            alt="메인 일러스트"
-            width={400}
-            height={300}
-            className="rounded-2xl shadow-md"
-          />
+        {/* 상담신청 버튼 */}
+        <div className="mb-8">
+          <ConsultationButton
+            variant="success"
+            size="lg"
+            className="text-lg px-8 py-4"
+          >
+            💬 상담 신청하기
+          </ConsultationButton>
         </div>
 
-        {/* 주요 기능 버튼들 - 그리드 레이아웃 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl">
+        {/* 주요 기능 카드들 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl w-full">
           {mainData.features.map((feature, index) => (
-            <div key={index} className="bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow">
-              {/* 기능 아이콘 */}
-              <div className="text-3xl mb-2">{feature.icon}</div>
-              {/* 기능 제목 */}
-              <h3 className="font-bold text-gray-800 mb-1">{feature.title}</h3>
-              {/* 기능 설명 */}
-              <p className="text-sm text-gray-600 mb-3">{feature.description}</p>
-              {/* 바로가기 버튼 */}
-              <CmpButton
-                label="바로가기"
-                click={() => {
-                  // 인덱스에 따른 페이지 이동 처리
-                  switch (index) {
-                    case 0: handleMentalHealthCheck(); break;
-                    case 1: handleConsultation(); break;
-                    case 2: handleChallenge(); break;
-                    case 3: handleResources(); break;
-                  }
-                }}
-              />
+            <div
+              key={index}
+              className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => {
+                switch (index) {
+                  case 0:
+                    handleMentalHealthCheck();
+                    break;
+                  case 1:
+                    handleConsultation();
+                    break;
+                  case 2:
+                    handleChallenge();
+                    break;
+                  case 3:
+                    handleResources();
+                    break;
+                  default:
+                    break;
+                }
+              }}
+            >
+              <div className="text-4xl mb-4">{feature.icon}</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+              <p className="text-gray-600">{feature.description}</p>
             </div>
           ))}
         </div>
 
-        {/* 추가 기능 버튼들 */}
-        <div className="flex gap-4 mt-8">
+        {/* 추가 액션 버튼들 */}
+        <div className="mt-8 flex flex-wrap justify-center gap-4">
           <CmpButton
-            label="대시보드"
-            click={handleDashboard}
-            styleType="primary"
-          />
+            onClick={handleDashboard}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg"
+          >
+            📊 대시보드
+          </CmpButton>
           <CmpButton
-            label="설정"
-            click={handleSettings}
-            styleType="secondary"
-          />
+            onClick={handleSettings}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg"
+          >
+            ⚙️ 설정
+          </CmpButton>
         </div>
       </main>
     );
   };
 
   return (
-    <PageWrapper
-      title="IBK 직원권익보호 포탈"
-      subtitle="건강한 마음, IBK 마음 건강검진"
-      showCard={false}
-    >
-      {drawMainContent()}
+    <PageWrapper>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        {drawMainContent()}
+      </div>
     </PageWrapper>
   );
 }

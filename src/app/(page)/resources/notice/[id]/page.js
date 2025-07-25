@@ -1,11 +1,11 @@
 'use client';
 
 import empNameCache from '@/common/empNameCache';
+import { usePageMoveStore } from '@/common/store/pageMoveStore';
 import EmpNameDisplay from '@/components/EmpNameDisplay';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { authAPI, fileAPI, noticeAPI } from '@/lib/api';
 import { Download, FileText, Paperclip } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 // 날짜 포맷팅 함수
@@ -37,7 +37,7 @@ function getStatusText(statusCode) {
 
 export default function NoticeDetailPage({ params }) {
   const { id } = params;
-  const router = useRouter();
+  const setMoveTo = usePageMoveStore((state) => state.setMoveTo);
 
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -152,7 +152,7 @@ export default function NoticeDetailPage({ params }) {
   };
 
   const handleBackToList = () => {
-    router.push('/resources/notice');
+    setMoveTo('/resources/notice');
   };
 
   const handlePrint = () => {
@@ -223,7 +223,7 @@ export default function NoticeDetailPage({ params }) {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  <span>작성자: <EmpNameDisplay empId={data.rgstEmpId} /></span>
+                  <span>작성자: <EmpNameDisplay empId={data.regEmpId} /></span>
                 </div>
                 <div className="flex items-center">
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -240,13 +240,13 @@ export default function NoticeDetailPage({ params }) {
               </div>
 
               {/* 수정자 정보 (작성자와 다른 경우에만 표시) */}
-              {data.updtEmpId && data.updtEmpId !== data.rgstEmpId && (
+              {data.updEmpId && data.updEmpId !== data.regEmpId && (
                 <div className="mt-3 text-sm text-gray-600">
                   <div className="flex items-center">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
-                    <span>수정자: <EmpNameDisplay empId={data.updtEmpId} /></span>
+                    <span>수정자: <EmpNameDisplay empId={data.updEmpId} /></span>
                     {data.updDate && (
                       <span className="ml-4">수정일: {formatDate(data.updDate)}</span>
                     )}

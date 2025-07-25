@@ -4,7 +4,7 @@ import storage from '@/common/storage';
 import { useLnbMenuStore } from '@/common/store/lnbMenuStore';
 import { useMenuStore } from '@/common/store/menuStore';
 import { usePageMoveStore } from '@/common/store/pageMoveStore';
-import { FullPopup, alert, bottomSheet } from '@/common/ui_com';
+import { FullPopup, alert, bottomSheet, toast } from '@/common/ui_com';
 import Board from '@/components/Board';
 import { CalendarSet, CmpBsArea } from '@/components/bottomSheets/cmp_bottomSheets';
 import { CmpBsCalendarArea, CmpBsPeriodCalendarArea, CmpBsWrapAccountCont, CmpBsWrapDefautlCont, CmpBsWrapDescriptionCont, CmpBsWrapLinkCont } from '@/components/bottomSheets/cmp_bottomSheets_wrapper';
@@ -32,6 +32,7 @@ export default function GuidePage() {
       { key: 'cmn', label: '공통코드+Board', href: '#cmn', icon: <ClipboardList size={18} /> },
       { key: 'zustand', label: '전역 상태 관리', href: '#zustand', icon: <Settings size={18} /> },
       { key: 'alert', label: '알림 컴포넌트', href: '#alert', icon: <Bell size={18} /> },
+      { key: 'toast', label: '토스트 컴포넌트', href: '#toast', icon: <Bell size={18} /> },
       { key: 'storage', label: '스토리지 유틸리티', href: '#storage', icon: <Database size={18} /> },
       { key: 'api', label: 'API 테스트', href: '#api', icon: <Cloud size={18} /> },
       { key: 'codesample', label: '코드 샘플', href: '#codesample', icon: <Code size={18} /> },
@@ -142,6 +143,36 @@ export default function GuidePage() {
 
   const handleTestError = () => {
     alert.ErrorAlert('오류 발생', [{ ERR_CTNT: '테스트 오류 메시지입니다.', INBN_ERR_DVCD: '', INBN_ERR_CD: '', SRVC_ID: 'TEST' }]);
+  };
+
+  // 토스트 테스트 함수들
+  const handleTestToast = () => {
+    toast.callCommonToastOpen('이것은 기본 토스트 메시지입니다.');
+  };
+
+  const handleTestToastWithOk = () => {
+    toast.callCommonToastOpen('확인 버튼이 있는 토스트입니다.', {
+      showOk: 'Y',
+      okLabel: '확인',
+      okCallback: () => {
+        alert.AlertOpen('토스트 확인', '토스트의 확인 버튼을 클릭했습니다.');
+      }
+    });
+  };
+
+  const handleTestToastWithCancel = () => {
+    toast.callCommonToastOpen('취소와 확인 버튼이 있는 토스트입니다.', {
+      showCancel: 'Y',
+      showOk: 'Y',
+      cancelLabel: '취소',
+      okLabel: '확인',
+      cancelCallback: () => {
+        alert.AlertOpen('토스트 취소', '토스트의 취소 버튼을 클릭했습니다.');
+      },
+      okCallback: () => {
+        alert.AlertOpen('토스트 확인', '토스트의 확인 버튼을 클릭했습니다.');
+      }
+    });
   };
 
   const handleStorageTest = () => {
@@ -1021,9 +1052,60 @@ export default function CmnCodeBoardSample() {
           </div>
         </section>
 
+        {/* 토스트 컴포넌트 */}
+        <section id="toast" className="mb-12 bg-white rounded-2xl shadow-lg p-8">
+          <h2 className="text-2xl font-semibold mb-4 text-orange-600">3. 토스트 컴포넌트</h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            <button className="px-4 py-3 bg-orange-500 text-white rounded hover:bg-orange-600"
+              onClick={handleTestToast}>
+              기본 토스트
+            </button>
+            <button className="px-4 py-3 bg-green-500 text-white rounded hover:bg-green-600"
+              onClick={handleTestToastWithOk}>
+              확인 버튼 토스트
+            </button>
+            <button className="px-4 py-3 bg-purple-500 text-white rounded hover:bg-purple-600"
+              onClick={handleTestToastWithCancel}>
+              취소/확인 토스트
+            </button>
+          </div>
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <h3 className="text-lg font-medium mb-2">토스트 사용법</h3>
+            <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
+              <pre>{`import { toast } from '@/common/ui_com';
+
+// 기본 토스트 (3초 후 자동 사라짐)
+toast.callCommonToastOpen('메시지입니다.');
+
+// 확인 버튼이 있는 토스트
+toast.callCommonToastOpen('확인 버튼이 있는 토스트입니다.', {
+  showOk: 'Y',
+  okLabel: '확인',
+  okCallback: () => {
+    console.log('확인 버튼 클릭됨');
+  }
+});
+
+// 취소와 확인 버튼이 있는 토스트
+toast.callCommonToastOpen('취소와 확인 버튼이 있는 토스트입니다.', {
+  showCancel: 'Y',
+  showOk: 'Y',
+  cancelLabel: '취소',
+  okLabel: '확인',
+  cancelCallback: () => {
+    console.log('취소 버튼 클릭됨');
+  },
+  okCallback: () => {
+    console.log('확인 버튼 클릭됨');
+  }
+});`}</pre>
+            </div>
+          </div>
+        </section>
+
         {/* 스토리지 유틸리티 */}
         <section id="storage" className="mb-12 bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-semibold mb-4 text-purple-600">3. 스토리지 유틸리티</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-purple-600">4. 스토리지 유틸리티</h2>
           <button className="px-4 py-3 bg-purple-500 text-white rounded hover:bg-purple-600"
             onClick={handleStorageTest}>
             스토리지 테스트
@@ -1032,7 +1114,7 @@ export default function CmnCodeBoardSample() {
 
         {/* API 테스트 */}
         <section id="api" className="mb-12 bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-semibold mb-4 text-teal-600">4. API 테스트</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-teal-600">5. API 테스트</h2>
           <div className="grid md:grid-cols-2 gap-4">
             <button className="px-4 py-3 bg-teal-500 text-white rounded hover:bg-teal-600"
               onClick={handleAuthTest}>
@@ -1047,7 +1129,7 @@ export default function CmnCodeBoardSample() {
 
         {/* 코드 샘플 */}
         <section id="codesample" className="mb-12 bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-semibold mb-4 text-orange-600">5. 코드 샘플</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-orange-600">6. 코드 샘플</h2>
 
           <div className="space-y-6">
             <div>
@@ -1095,6 +1177,39 @@ alert.ErrorAlert('오류 제목', [{
   INBN_ERR_CD: '',
   SRVC_ID: 'SERVICE'
 }]);`}</pre>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-medium mb-2">토스트 사용법</h3>
+              <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
+                <pre>{`import { toast } from '@/common/ui_com';
+
+// 기본 토스트 (3초 후 자동 사라짐)
+toast.callCommonToastOpen('메시지입니다.');
+
+// 확인 버튼이 있는 토스트
+toast.callCommonToastOpen('확인 버튼이 있는 토스트입니다.', {
+  showOk: 'Y',
+  okLabel: '확인',
+  okCallback: () => {
+    console.log('확인 버튼 클릭됨');
+  }
+});
+
+// 취소와 확인 버튼이 있는 토스트
+toast.callCommonToastOpen('취소와 확인 버튼이 있는 토스트입니다.', {
+  showCancel: 'Y',
+  showOk: 'Y',
+  cancelLabel: '취소',
+  okLabel: '확인',
+  cancelCallback: () => {
+    console.log('취소 버튼 클릭됨');
+  },
+  okCallback: () => {
+    console.log('확인 버튼 클릭됨');
+  }
+});`}</pre>
               </div>
             </div>
 
@@ -1182,7 +1297,7 @@ const getMenus = async () => {
 
         {/* 컴포넌트 목록 */}
         <section id="list" className="mb-12 bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-semibold mb-4 text-indigo-600">6. 주요 컴포넌트 목록</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-indigo-600">7. 주요 컴포넌트 목록</h2>
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className="text-lg font-medium mb-3">UI 컴포넌트</h3>
@@ -1204,6 +1319,7 @@ const getMenus = async () => {
                 <li>• <code>alert.AlertOpen</code> - 알림 표시</li>
                 <li>• <code>alert.ConfirmOpen</code> - 확인 다이얼로그</li>
                 <li>• <code>alert.ErrorAlert</code> - 오류 알림</li>
+                <li>• <code>toast.callCommonToastOpen</code> - 토스트 알림</li>
               </ul>
             </div>
           </div>
@@ -1211,7 +1327,7 @@ const getMenus = async () => {
 
         {/* 환경 설정 */}
         <section id="env" className="mb-12 bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-semibold mb-4 text-teal-600">7. 환경 설정</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-teal-600">8. 환경 설정</h2>
           <div className="bg-gray-100 rounded p-4">
             <h3 className="text-lg font-medium mb-2">환경 변수 사용법</h3>
             <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
@@ -1228,7 +1344,7 @@ const isDebug = process.env.NEXT_PUBLIC_DEBUG === 'true';`}</pre>
 
         {/* 공지사항 상세 조회 예제 */}
         <section id="notice" className="mb-12 bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-semibold mb-4 text-blue-600">8. 공지사항 상세 조회 예제</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-blue-600">9. 공지사항 상세 조회 예제</h2>
           <div className="grid md:grid-cols-2 gap-4">
             <button className="px-4 py-3 bg-blue-500 text-white rounded hover:bg-blue-600"
               onClick={handleNoticeDetailTest}>
@@ -1248,7 +1364,7 @@ console.log(detail); // { ttl, regEmpId, regDate, stsCd, cntn, ... }`}</pre>
 
         {/* Board 컴포넌트 예제 */}
         <section id="board" className="mb-12 bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-semibold mb-4 text-blue-600">9. Board 컴포넌트 사용 예제</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-blue-600">10. Board 컴포넌트 사용 예제</h2>
           <div className="mb-4 text-gray-700">컬럼 정렬, 페이징, row 클릭 등 Board의 기본 사용법 예시입니다.</div>
           <Board
             columns={boardColumns}

@@ -15,7 +15,6 @@ const columns = [
     { key: 'ttl', label: '제목' },
     { key: 'writer', label: '작성자' },
     { key: 'regDate', label: '작성일' },
-    { key: 'stsCd', label: '상태' },
 ];
 
 export default function NoticePage() {
@@ -26,9 +25,10 @@ export default function NoticePage() {
     const [sortKey, setSortKey] = useState('seq');
     const [sortOrder, setSortOrder] = useState('asc');
     const [search, setSearch] = useState('');
+    const [searchField, setSearchField] = useState('ttl'); // 검색 필드 (ttl: 제목, cntn: 내용)
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    const [stsCd, setStsCd] = useState('');
+    const [stsCd, setStsCd] = useState('STS001'); // 직원화면에서는 STS001(활성) 상태만 노출
     const [loading, setLoading] = useState(false);
     const [selected, setSelected] = useState(null);
     const [detail, setDetail] = useState(null);
@@ -61,10 +61,11 @@ export default function NoticePage() {
                 size: params.size || size,
                 sortKey: params.sortKey || sortKey,
                 sortOrder: params.sortOrder || sortOrder,
-                ttl: params.ttl ?? search,
+                searchKeyword: params.searchKeyword ?? search,
+                searchField: params.searchField ?? searchField,
                 startDate: params.startDate ?? startDate,
                 endDate: params.endDate ?? endDate,
-                stsCd: params.stsCd ?? stsCd,
+                stsCd: params.stsCd ?? 'STS001', // 직원화면에서는 STS001(활성) 상태만 노출
             });
             setData(
                 (res.content || []).map(item => ({
@@ -114,7 +115,7 @@ export default function NoticePage() {
     const handleSearch = (e) => {
         e.preventDefault();
         setPage(1);
-        fetchList({ page: 1, size, ttl: search, startDate, endDate, stsCd });
+        fetchList({ page: 1, size, searchKeyword: search, searchField, startDate, endDate, stsCd: 'STS001' });
     };
 
     // 정렬
@@ -146,8 +147,19 @@ export default function NoticePage() {
             {!selected ? (
                 <>
                     <form onSubmit={handleSearch} className="mb-4 flex flex-row flex-wrap items-center gap-x-2 gap-y-2">
+                        <CmpSelect
+                            value={searchField}
+                            onChange={(value) => setSearchField(value)}
+                            options={[
+                                { value: 'ttl', label: '제목' },
+                                { value: 'cntn', label: '내용' },
+                                { value: 'both', label: '제목+내용' }
+                            ]}
+                            size="md"
+                            wrapperClassName="w-28"
+                        />
                         <CmpInput
-                            placeholder="제목"
+                            placeholder="검색어 입력"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             wrapperClassName="w-48"
@@ -163,12 +175,6 @@ export default function NoticePage() {
                             value={endDate}
                             onChange={e => setEndDate(e.target.value)}
                             wrapperClassName="w-40"
-                        />
-                        <CmpInput
-                            placeholder="상태코드"
-                            value={stsCd}
-                            onChange={e => setStsCd(e.target.value)}
-                            wrapperClassName="w-32"
                         />
                         <CmpSelect
                             value={size}
@@ -198,6 +204,10 @@ export default function NoticePage() {
                             if (col.key === 'rowNum') return row.rowNum;
                             if (col.key === 'writer') {
                                 return <EmpNameDisplay empId={row.writer} />;
+                            }
+                            if (col.key === 'regDate') {
+                                // 작성일을 날짜+시간 형식으로 표시
+                                return row.regDate ? row.regDate.replace('T', ' ').substring(0, 19) : '-';
                             }
                             return row[col.key];
                         }}

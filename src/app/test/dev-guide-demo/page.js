@@ -15,18 +15,16 @@
 import { toast } from '@/common/ui_com';
 import { CmpBadge, CmpInput, CmpSelect, CmpTextarea, CommonModal } from '@/components/ui';
 import {
-    BookOpen,
-    Code,
-    Database,
-    FileText,
-    GitBranch,
-    Globe,
-    Layers,
-    Package,
-    Search,
-    Settings,
-    Users,
-    X
+  BookOpen,
+  Database,
+  GitBranch,
+  Globe,
+  Layers,
+  Package,
+  Search,
+  Settings,
+  Users,
+  X
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -229,10 +227,10 @@ CREATE TABLE TB_NTI_LST (
     TTL VARCHAR(200) NOT NULL,
     CNTN TEXT,
     STS_CD VARCHAR(10) DEFAULT 'STS001',
-    RGST_EMP_ID VARCHAR(20),
-    RGST_DT TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UPDT_EMP_ID VARCHAR(20),
-    UPDT_DT TIMESTAMP,
+    REG_EMP_ID VARCHAR(20),
+    REG_DATE TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UPD_EMP_ID VARCHAR(20),
+    UPD_DATE TIMESTAMP,
     FILE_ATTACH_YN CHAR(1) DEFAULT 'N'
 );
 \`\`\`
@@ -245,8 +243,8 @@ CREATE TABLE TB_EMP_LST (
     DEPT_CD VARCHAR(10),
     POS_CD VARCHAR(10),
     STS_CD VARCHAR(10) DEFAULT 'STS001',
-    RGST_DT TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UPDT_DT TIMESTAMP
+    REG_DATE TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UPD_DATE TIMESTAMP
 );
 \`\`\``,
       author: '정선우',
@@ -590,14 +588,6 @@ CMD ["nginx", "-g", "daemon off;"]
               <X className="w-4 h-4" />
               초기화
             </button>
-            <button
-              onClick={openCreateModal}
-              disabled={loading}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 flex items-center gap-2"
-            >
-              <BookOpen className="w-4 h-4" />
-              가이드 등록
-            </button>
           </div>
         </div>
 
@@ -643,39 +633,13 @@ CMD ["nginx", "-g", "daemon off;"]
                         <Users className="w-4 h-4" />
                         <span>작성자: {guide.author}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <FileText className="w-4 h-4" />
-                        <span>조회수: {guide.viewCount}</span>
-                      </div>
                     </div>
 
                     <p className="text-gray-700 mb-4 line-clamp-3">
                       {guide.description}
                     </p>
 
-                    {/* 추가 정보 표시 */}
-                    <div className="text-xs text-gray-500 space-y-1 mb-3">
-                      <div>작성일: {new Date(guide.createdAt).toLocaleDateString()}</div>
-                      {guide.updatedAt !== guide.createdAt && (
-                        <div>수정일: {new Date(guide.updatedAt).toLocaleDateString()}</div>
-                      )}
-                    </div>
-
                     <div className="flex gap-2">
-                      <button
-                        className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 flex items-center gap-1"
-                        onClick={() => openEditModal(guide)}
-                      >
-                        <Code className="w-4 h-4" />
-                        수정
-                      </button>
-                      <button
-                        className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1"
-                        onClick={() => deleteGuide(guide.id)}
-                      >
-                        <X className="w-4 h-4" />
-                        삭제
-                      </button>
                       <button
                         className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 flex items-center gap-1"
                         onClick={() => {
@@ -817,20 +781,7 @@ CMD ["nginx", "-g", "daemon off;"]
           )}
         </CommonModal>
 
-        {/* Toast 영역 */}
-        <div id="commonToast" className="toastPopupArea" style={{ display: 'none' }}>
-          <div className="toastPopupContArea">
-            <p className="toastText"></p>
-            <div className="toastBtnArea" style={{ display: 'none' }}>
-              <button type="button" className="toastBtn btn01">
-                <span className="base">취소</span>
-              </button>
-              <button type="button" className="toastBtn btn02">
-                <span className="base">확인</span>
-              </button>
-            </div>
-          </div>
-        </div>
+
       </div>
     </div>
   );

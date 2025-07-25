@@ -30,6 +30,7 @@ export default function AdminPage() {
     applications: 11,
     programs: 5,
     consultations: 1,
+    anonymousUsers: 3,
     statistics: {
       mentalHealth: 25,
       harassment: 20,
@@ -67,6 +68,11 @@ export default function AdminPage() {
   const handleConsultationStatus = () => {
     console.log('Consultation status');
     setMove('/consultation-status');
+  };
+
+  const handleAnonymousUserManagement = () => {
+    console.log('Anonymous user management');
+    setMoveTo('/admin/anonymousUserMng');
   };
 
   const toastClose = () => {
@@ -210,6 +216,38 @@ export default function AdminPage() {
     );
   };
 
+  const drawAnonymousUserManagementCard = () => {
+    return (
+      <CmpSection>
+        <CmpSectionHead>
+          <h2 className="cmp_section_tit">익명 사용자 관리</h2>
+        </CmpSectionHead>
+        <CmpSectionBody>
+          <div className="bg-orange-100 rounded-2xl p-6 flex flex-col shadow">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-bold text-lg text-orange-700">익명 사용자 관리</span>
+              <span className="text-2xl font-extrabold text-orange-500">{adminData.anonymousUsers}명</span>
+            </div>
+            <table className="w-full text-sm mb-2">
+              <thead>
+                <tr className="text-orange-600">
+                  <th className="text-left">닉네임</th>
+                  <th className="text-left">상담건수</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>익명사용자1</td><td>2건</td></tr>
+                <tr><td>익명사용자2</td><td>1건</td></tr>
+                <tr><td>익명사용자3</td><td>3건</td></tr>
+              </tbody>
+            </table>
+            <CmpButton label="익명 사용자 관리" click={handleAnonymousUserManagement} />
+          </div>
+        </CmpSectionBody>
+      </CmpSection>
+    );
+  };
+
   const drawBottomLists = () => {
     return (
       <div className="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
@@ -273,6 +311,7 @@ export default function AdminPage() {
         {drawScheduleCard()}
         {drawStatisticsCard()}
         {drawConsultationCard()}
+        {drawAnonymousUserManagementCard()}
       </div>
       {drawBottomLists()}
     </PageWrapper>

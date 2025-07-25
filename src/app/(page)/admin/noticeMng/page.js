@@ -157,10 +157,10 @@ export default function NoticeManagementPage() {
         console.log('공지사항 상세 정보:', {
           seq: notice.seq,
           title: notice.ttl,
-          rgstEmpId: notice.rgstEmpId,
-          rgstEmpName: empNameCache.getEmpName(notice.rgstEmpId),
-          updtEmpId: notice.updtEmpId,
-          updtEmpName: notice.updtEmpId ? empNameCache.getEmpName(notice.updtEmpId) : null,
+          regEmpId: notice.regEmpId,
+          regEmpName: empNameCache.getEmpName(notice.regEmpId),
+          updEmpId: notice.updEmpId,
+          updEmpName: notice.updEmpId ? empNameCache.getEmpName(notice.updEmpId) : null,
           regDate: notice.regDate,
           updDate: notice.updDate
         });
@@ -735,12 +735,12 @@ export default function NoticeManagementPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     <User className="w-4 h-4" />
-                    <span>작성자: <EmpNameDisplay empId={notice.rgstEmpId} /></span>
+                    <span>작성자: <EmpNameDisplay empId={notice.regEmpId} /></span>
                   </div>
-                  {notice.updtEmpId && notice.updtEmpId !== notice.rgstEmpId && (
+                  {notice.updEmpId && notice.updEmpId !== notice.regEmpId && (
                     <div className="flex items-center gap-1">
                       <Edit className="w-4 h-4" />
-                      <span>수정자: <EmpNameDisplay empId={notice.updtEmpId} /></span>
+                      <span>수정자: <EmpNameDisplay empId={notice.updEmpId} /></span>
                     </div>
                   )}
                   <div className="flex items-center gap-1">
@@ -847,7 +847,7 @@ export default function NoticeManagementPage() {
             </label>
             <CmpTextarea
               id="content"
-              rows={8}
+              rows={12}
               value={formData.content}
               onChange={(e) => setFormData({...formData, content: e.target.value})}
               required
@@ -1038,20 +1038,7 @@ export default function NoticeManagementPage() {
         </form>
       </CommonModal>
 
-      {/* Toast 영역 */}
-      <div id="commonToast" className="toastPopupArea" style={{ display: 'none' }}>
-        <div className="toastPopupContArea">
-          <p className="toastText"></p>
-          <div className="toastBtnArea" style={{ display: 'none' }}>
-            <button type="button" className="toastBtn btn01">
-              <span className="base">취소</span>
-            </button>
-            <button type="button" className="toastBtn btn02">
-              <span className="base">확인</span>
-            </button>
-          </div>
-        </div>
-      </div>
+
     </div>
     </PageWrapper>
   );

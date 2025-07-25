@@ -9,7 +9,7 @@ export default function CmpTextarea({
   error = false,
   clearable = true,
   placeholder = '입력하세요',
-  rows = 4,
+  rows = 12,
   maxLength,
   leftIcon,
   rightIcon,
@@ -36,7 +36,7 @@ export default function CmpTextarea({
 
   // 기본 스타일 (로그인 input과 유사, rounded-none)
   const baseTextareaStyle =
-    'w-full h-12 px-4 py-2 border border-gray-300 rounded-none bg-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-400 resize-none';
+    'w-full min-h-[300px] px-4 py-2 border border-gray-300 rounded-none bg-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-400 resize-none';
 
   return (
     <div className={`w-full ${wrapperClassName}`} style={style}>

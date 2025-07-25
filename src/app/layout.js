@@ -9,6 +9,7 @@
 
 import { Inter } from "next/font/google";
 import "./globals.css";
+import ConsultationPopupProvider from "@/components/ConsultationPopupProvider";
 
 // Inter 폰트 설정 - Google Fonts에서 가져온 웹 폰트
 const inter = Inter({ subsets: ["latin"] });
@@ -29,7 +30,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ko">
       <body className={inter.className}>
-        {children}
+        <ConsultationPopupProvider>
+          {children}
+        </ConsultationPopupProvider>
       </body>
     </html>
   );

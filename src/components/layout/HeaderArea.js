@@ -28,7 +28,7 @@ export default function HeaderArea() {
     // 1레벨 메뉴에 2레벨 메뉴를 children으로 추가
     const hierarchicalMenus = level1Menus.map(level1Menu => {
       const children = level2Menus
-        .filter(level2Menu => level2Menu.pmnuCd === level1Menu.mnuCd)
+        .filter(level2Menu => level2Menu.pMnuCd === level1Menu.mnuCd)
         .sort((a, b) => a.mnuOrd - b.mnuOrd);
 
       return {

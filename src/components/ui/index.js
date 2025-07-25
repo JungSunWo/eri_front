@@ -9,3 +9,4 @@ export { default as CommonModal } from './CommonModal';
 export { default as DataTable } from './DataTable';
 export { default as InfoCard } from './InfoCard';
 export { default as InfoList } from './InfoList';
+export { default as CmpButton } from './CmpButton';

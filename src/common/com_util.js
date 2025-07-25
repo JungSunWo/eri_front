@@ -2257,7 +2257,19 @@ const util = {
     },
 }
 
-export { util };
+/**
+ * Toast 메시지 표시 함수
+ * @param {string} message - 표시할 메시지
+ */
+const displayToast = (message) => {
+  if (typeof window !== 'undefined' && window.toast) {
+    window.toast.callCommonToastOpen(message);
+  } else {
+    console.log('Toast:', message);
+  }
+};
+
+export { displayToast, util };
 
 var lookupCodeCallback = null;
 

@@ -11,7 +11,7 @@
  **/
 
 import { X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
 
 /**
  * 입력 제한 정규식 매핑
@@ -52,7 +52,7 @@ const inputTypePatterns = {
  * @param {string} props.type - input 타입 (text, password, email 등)
  * @returns {JSX.Element} 입력 컴포넌트
  */
-export default function CmpInput({
+const CmpInput = forwardRef(({
     value: propValue = '',
     onChange: propOnChange,
     inputType = 'all', // eng, kor, num, engnum, korengnum, all, custom
@@ -70,7 +70,7 @@ export default function CmpInput({
     style,
     type = 'text',
     ...props
-}) {
+}, ref) => {
     // 내부 상태 관리
     const [value, setValue] = useState(propValue);        // 입력값 상태
     const [showPassword, setShowPassword] = useState(false); // 비밀번호 표시/숨김 상태
@@ -152,6 +152,7 @@ export default function CmpInput({
 
                 {/* 입력 필드 */}
                 <input
+                    ref={ref}
                     type={inputTypeFinal}
                     className={`${baseInputStyle} flex-1 outline-none bg-transparent rounded-none ${className} ${inputClassName}`}
                     placeholder={placeholder}
@@ -209,4 +210,8 @@ export default function CmpInput({
             )}
         </div>
     );
-}
+});
+
+CmpInput.displayName = 'CmpInput';
+
+export default CmpInput;

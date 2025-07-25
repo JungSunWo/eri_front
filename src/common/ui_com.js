@@ -195,8 +195,11 @@ const bottomSheet = {
                 // ARIA 속성 정리
                 const hiddenElements = document.querySelectorAll("[data-hidden=hidden]");
                 hiddenElements.forEach(element => {
-                    element.removeAttribute("data-hidden");
-                    element.removeAttribute("aria-hidden");
+                    // option, optgroup 요소는 건드리지 않음
+                    if (element.tagName !== 'OPTION' && element.tagName !== 'OPTGROUP') {
+                        element.removeAttribute("data-hidden");
+                        element.removeAttribute("aria-hidden");
+                    }
                 });
 
                 callback();
@@ -233,8 +236,11 @@ const bottomSheet = {
             // ARIA 속성 정리
             const hiddenElements = document.querySelectorAll("[data-hidden=hidden]");
             hiddenElements.forEach(element => {
-                element.removeAttribute("data-hidden");
-                element.removeAttribute("aria-hidden");
+                // option, optgroup 요소는 건드리지 않음
+                if (element.tagName !== 'OPTION' && element.tagName !== 'OPTGROUP') {
+                    element.removeAttribute("data-hidden");
+                    element.removeAttribute("aria-hidden");
+                }
             });
         }
     },
@@ -337,13 +343,32 @@ const toast = {
         // "[data-hidden=hidden]" 속성을 가진 모든 요소에서 "data-hidden"과 "aria-hidden" 속성을 제거
         const hiddenElements = document.querySelectorAll("[data-hidden=hidden]");
         hiddenElements.forEach(element => {
-            element.removeAttribute("data-hidden");
-            element.removeAttribute("aria-hidden");
+            // option, optgroup 요소는 건드리지 않음
+            if (element.tagName !== 'OPTION' && element.tagName !== 'OPTGROUP') {
+                element.removeAttribute("data-hidden");
+                element.removeAttribute("aria-hidden");
+            }
         });
     },
     callCommonToastOpen: (toastTitle, option) => {
 
         let PopID = "#commonToast";
+
+        // DOM 요소가 존재하는지 확인
+        const toastElement = document.querySelector(PopID);
+        if (!toastElement) {
+            console.warn('Toast element not found:', PopID);
+            // 간단한 alert로 대체
+            alert(toastTitle);
+            return;
+        }
+
+        const toastTextElement = document.querySelector(PopID + " .toastText");
+        if (!toastTextElement) {
+            console.warn('Toast text element not found:', PopID + " .toastText");
+            alert(toastTitle);
+            return;
+        }
 
         // 현재 포커스된 요소 저장
         const currentFocus = document.activeElement;
@@ -351,7 +376,7 @@ const toast = {
             currentFocus.setAttribute("data-previous-focus", "true");
         }
 
-        document.querySelector(PopID + " .toastText").textContent = toastTitle;
+        toastTextElement.textContent = toastTitle;
 
         let toastType;
 
@@ -495,8 +520,11 @@ const toast = {
             // "[data-hidden=hidden]" 속성을 가진 모든 요소에서 "data-hidden"과 "aria-hidden" 속성을 제거
             const hiddenElements = document.querySelectorAll("[data-hidden=hidden]");
             hiddenElements.forEach(element => {
-                element.removeAttribute("data-hidden");
-                element.removeAttribute("aria-hidden");
+                // option, optgroup 요소는 건드리지 않음
+                if (element.tagName !== 'OPTION' && element.tagName !== 'OPTGROUP') {
+                    element.removeAttribute("data-hidden");
+                    element.removeAttribute("aria-hidden");
+                }
             });
         }, 300);
     }
@@ -570,8 +598,11 @@ const alert = {
             // "[data-hidden=hidden]" 속성을 가진 모든 요소에서 "data-hidden"과 "aria-hidden" 속성을 제거
             const hiddenElements = document.querySelectorAll("[data-hidden=hidden]");
             hiddenElements.forEach(element => {
-                element.removeAttribute("data-hidden");
-                element.removeAttribute("aria-hidden");
+                // option, optgroup 요소는 건드리지 않음
+                if (element.tagName !== 'OPTION' && element.tagName !== 'OPTGROUP') {
+                    element.removeAttribute("data-hidden");
+                    element.removeAttribute("aria-hidden");
+                }
             });
 
             popLengthCk();
@@ -729,7 +760,13 @@ const alert = {
 
         let PopID = "#commonErrorAlert";
 
-        if (document.querySelector(PopID).style.display === "block") {
+        const errorElement = document.querySelector(PopID);
+        if (!errorElement) {
+            console.error('ErrorAlert: DOM element not found:', PopID);
+            return;
+        }
+
+        if (errorElement.style.display === "block") {
             return;
         }
 
@@ -947,8 +984,11 @@ const FullPopup = {
         // "[data-hidden=hidden]" 속성을 가진 모든 요소에서 "data-hidden"과 "aria-hidden" 속성을 제거
         const hiddenElements = document.querySelectorAll("[data-hidden=hidden]");
         hiddenElements.forEach(element => {
-            element.removeAttribute("data-hidden");
-            element.removeAttribute("aria-hidden");
+            // option, optgroup 요소는 건드리지 않음
+            if (element.tagName !== 'OPTION' && element.tagName !== 'OPTGROUP') {
+                element.removeAttribute("data-hidden");
+                element.removeAttribute("aria-hidden");
+            }
         });
     },
 }
@@ -1027,7 +1067,10 @@ const addAriaHidden = (PopID, type) => {
         const isFocused = element === document.activeElement || element.contains(document.activeElement);
         const hasFocus = element.matches(':focus') || element.querySelector(':focus');
 
-        if (element !== popElement && !popElement.contains(element) && !isFocused && !hasFocus) {
+        // option, optgroup 요소에는 aria-hidden을 적용하지 않음 (접근성 문제 방지)
+        const isOptionElement = element.tagName === 'OPTION' || element.tagName === 'OPTGROUP';
+
+        if (element !== popElement && !popElement.contains(element) && !isFocused && !hasFocus && !isOptionElement) {
             element.setAttribute("aria-hidden", "true");
             element.setAttribute("data-hidden", "hidden");
         }

@@ -14,6 +14,10 @@ export const primary = css`
   background-color: #2563eb;
   .base { color: #fff; }
 `;
+export const secondary = css`
+  background-color: #6b7280;
+  .base { color: #fff; }
+`;
 export const success = css`
   background-color: #22c55e;
   .base { color: #fff; }
@@ -121,6 +125,12 @@ export const h28 = css`
     .base{font-size:1.3rem;line-height:2rem;}
 `;
 
+//높이 32
+export const h32 = css`
+    min-height:3.2rem;width:auto;display:inline-block;padding:0.3rem 1.2rem 0 1.2rem;border-radius:0.4rem;
+    .base{font-size:1.4rem;line-height:2.2rem;}
+`;
+
 //높이 40
 export const h40 = css`
     min-height: 3rem;
@@ -143,6 +153,7 @@ export const StyleCommonButton = css`
 
     /* styleType별 색상 분기 */
     ${props => props['data-styletype'] === 'primary' && primary};
+    ${props => props['data-styletype'] === 'secondary' && secondary};
     ${props => props['data-styletype'] === 'success' && success};
     ${props => props['data-styletype'] === 'info' && info};
     ${props => props['data-styletype'] === 'warning' && warning};
@@ -164,6 +175,7 @@ export const StyleCommonButton = css`
 
     /* 컴포넌트 사이즈별 */
     ${props => props['data-size'] === 'h28' && h28};
+    ${props => props['data-size'] === 'h32' && h32};
     ${props => props['data-size'] === 'h76' && h76};
     ${props => props['data-size'] === 'h40' && h40};
 
