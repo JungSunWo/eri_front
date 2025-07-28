@@ -1,13 +1,13 @@
 'use client';
 
-import empNameCache from '@/common/empNameCache';
+
 import { usePageMoveStore } from '@/common/store/pageMoveStore';
 import Board from '@/components/Board';
 import EmpNameDisplay from '@/components/EmpNameDisplay';
 import PageWrapper from '@/components/layout/PageWrapper';
 import CmpInput from '@/components/ui/CmpInput';
 import CmpSelect from '@/components/ui/CmpSelect';
-import { authAPI, noticeAPI } from '@/lib/api';
+import { noticeAPI } from '@/lib/api';
 import { useEffect, useState } from 'react';
 
 const columns = [
@@ -34,23 +34,7 @@ export default function NoticePage() {
     const [detail, setDetail] = useState(null);
     const setMoveTo = usePageMoveStore((state) => state.setMoveTo);
 
-    // 페이지 로드 시 직원 캐시 초기화
-    useEffect(() => {
-        const initializePage = async () => {
-            // 직원 캐시가 초기화되지 않았으면 초기화
-            if (!empNameCache.isCacheInitialized()) {
-                try {
-                    const employeeCache = await authAPI.getEmployeeCache();
-                    empNameCache.initialize(employeeCache);
-                    console.log('직원 캐시 초기화 완료:', empNameCache.getSize(), '명');
-                } catch (error) {
-                    console.error('직원 캐시 초기화 실패:', error);
-                }
-            }
-        };
 
-        initializePage();
-    }, []);
 
     // 목록 불러오기
     const fetchList = async (params = {}) => {
@@ -203,7 +187,7 @@ export default function NoticePage() {
                         renderCell={(row, col) => {
                             if (col.key === 'rowNum') return row.rowNum;
                             if (col.key === 'writer') {
-                                return <EmpNameDisplay empId={row.writer} />;
+                                return <EmpNameDisplay empId={row.writer} empName={row.writerName} />;
                             }
                             if (col.key === 'regDate') {
                                 // 작성일을 날짜+시간 형식으로 표시
@@ -224,7 +208,7 @@ export default function NoticePage() {
                     ) : detail ? (
                         <div className="border rounded p-6 bg-gray-50">
                             <h2 className="text-xl font-bold mb-2">{detail.ttl}</h2>
-                            <div className="mb-2 text-gray-600">작성자: <EmpNameDisplay empId={detail.writer} /></div>
+                            <div className="mb-2 text-gray-600">작성자: <EmpNameDisplay empId={detail.writer} empName={detail.writerName} /></div>
                             <div className="mb-4 text-gray-500">작성일: {detail.regDate?.slice(0, 10) || '-'}</div>
                             <div className="prose" dangerouslySetInnerHTML={{ __html: detail.ctnt || '' }} />
                         </div>

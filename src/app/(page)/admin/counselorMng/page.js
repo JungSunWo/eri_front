@@ -3,19 +3,19 @@
 import { alert, toast } from '@/common/ui_com';
 import Board from '@/components/Board';
 import PageWrapper from '@/components/layout/PageWrapper';
-import { createAdmin, deleteAdmin, getAdminList, getEmployeeList, updateAdmin } from '@/lib/api/adminAPI';
+import { createCounselor, deleteCounselor, getCounselorList, getEmployeeList, updateCounselor } from '@/lib/api/counselorAPI';
 import { useEffect, useState } from 'react';
 
-export default function AdminManagementPage() {
+export default function CounselorManagementPage() {
   const [employees, setEmployees] = useState([]);
-  const [admins, setAdmins] = useState([]);
+  const [counselors, setCounselors] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [adminSearchKeyword, setAdminSearchKeyword] = useState(''); // 관리자 검색 키워드
-  const [adminLevel, setAdminLevel] = useState('ADMIN'); // ADMIN, SUPER_ADMIN
-  const [editingAdmin, setEditingAdmin] = useState(null);
-  const [editingAdminLevel, setEditingAdminLevel] = useState('ADMIN');
+  const [counselorSearchKeyword, setCounselorSearchKeyword] = useState(''); // 상담사 검색 키워드
+  const [counselorInfoClsf, setCounselorInfoClsf] = useState('PROFESSIONAL'); // 상담자정보구분코드
+  const [editingCounselor, setEditingCounselor] = useState(null);
+  const [editingCounselorInfoClsf, setEditingCounselorInfoClsf] = useState('PROFESSIONAL');
 
   // 직원 목록 페이징 상태
   const [employeePage, setEmployeePage] = useState(1);
@@ -24,12 +24,12 @@ export default function AdminManagementPage() {
   const [employeeSortKey, setEmployeeSortKey] = useState('');
   const [employeeSortOrder, setEmployeeSortOrder] = useState('asc');
 
-  // 관리자 목록 페이징 상태
-  const [adminPage, setAdminPage] = useState(1);
-  const [adminTotalPages, setAdminTotalPages] = useState(1);
-  const [adminTotalElements, setAdminTotalElements] = useState(0);
-  const [adminSortKey, setAdminSortKey] = useState('');
-  const [adminSortOrder, setAdminSortOrder] = useState('asc');
+  // 상담사 목록 페이징 상태
+  const [counselorPage, setCounselorPage] = useState(1);
+  const [counselorTotalPages, setCounselorTotalPages] = useState(1);
+  const [counselorTotalElements, setCounselorTotalElements] = useState(0);
+  const [counselorSortKey, setCounselorSortKey] = useState('');
+  const [counselorSortOrder, setCounselorSortOrder] = useState('asc');
 
   // 직원 목록 조회
   const fetchEmployees = async (page = 1, sortKey = '', sortOrder = 'asc') => {
@@ -60,30 +60,30 @@ export default function AdminManagementPage() {
     }
   };
 
-  // 관리자 목록 조회
-  const fetchAdmins = async (page = 1, sortKey = '', sortOrder = 'asc') => {
+  // 상담사 목록 조회
+  const fetchCounselors = async (page = 1, sortKey = '', sortOrder = 'asc') => {
     try {
       setLoading(true);
       const params = {
-        keyword: adminSearchKeyword, // 관리자 검색 키워드 추가
+        keyword: counselorSearchKeyword, // 상담사 검색 키워드 추가
         page: page,
         size: 5, // 페이지당 5개씩
         sortBy: sortKey || undefined,
         sortDirection: sortKey ? sortOrder : undefined
       };
-      const response = await getAdminList(params);
+      const response = await getCounselorList(params);
       if (response.success) {
         const data = response.data;
-        setAdmins(data.content || data || []);
-        setAdminTotalPages(data.totalPages || 1);
-        setAdminTotalElements(data.totalElements || 0);
-        setAdminPage(page);
+        setCounselors(data.content || data || []);
+        setCounselorTotalPages(data.totalPages || 1);
+        setCounselorTotalElements(data.totalElements || 0);
+        setCounselorPage(page);
       } else {
-        toast.callCommonToastOpen(response.message || '관리자 목록 조회에 실패했습니다.');
+        toast.callCommonToastOpen(response.message || '상담사 목록 조회에 실패했습니다.');
       }
     } catch (error) {
-      console.error('관리자 목록 조회 실패:', error);
-      toast.callCommonToastOpen('관리자 목록 조회 중 오류가 발생했습니다.');
+      console.error('상담사 목록 조회 실패:', error);
+      toast.callCommonToastOpen('상담사 목록 조회 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ export default function AdminManagementPage() {
   // 페이지 로드 시 데이터 조회
   useEffect(() => {
     fetchEmployees();
-    fetchAdmins();
+    fetchCounselors();
   }, []);
 
   // 직원 검색 실행
@@ -101,10 +101,10 @@ export default function AdminManagementPage() {
     fetchEmployees(1, employeeSortKey, employeeSortOrder);
   };
 
-  // 관리자 검색 실행
-  const handleAdminSearch = () => {
-    setAdminPage(1); // 검색 시 첫 페이지로
-    fetchAdmins(1, adminSortKey, adminSortOrder);
+  // 상담사 검색 실행
+  const handleCounselorSearch = () => {
+    setCounselorPage(1); // 검색 시 첫 페이지로
+    fetchCounselors(1, counselorSortKey, counselorSortOrder);
   };
 
   // 직원 목록 페이징 처리
@@ -119,16 +119,16 @@ export default function AdminManagementPage() {
     fetchEmployees(employeePage, key, order);
   };
 
-  // 관리자 목록 페이징 처리
-  const handleAdminPageChange = (page) => {
-    fetchAdmins(page, adminSortKey, adminSortOrder);
+  // 상담사 목록 페이징 처리
+  const handleCounselorPageChange = (page) => {
+    fetchCounselors(page, counselorSortKey, counselorSortOrder);
   };
 
-  // 관리자 목록 정렬 처리
-  const handleAdminSortChange = (key, order) => {
-    setAdminSortKey(key);
-    setAdminSortOrder(order);
-    fetchAdmins(adminPage, key, order);
+  // 상담사 목록 정렬 처리
+  const handleCounselorSortChange = (key, order) => {
+    setCounselorSortKey(key);
+    setCounselorSortOrder(order);
+    fetchCounselors(counselorPage, key, order);
   };
 
   // 직원 선택
@@ -136,8 +136,8 @@ export default function AdminManagementPage() {
     setSelectedEmployee(employee);
   };
 
-  // 관리자 등록
-  const handleAdminRegister = async () => {
+  // 상담사 등록
+  const handleCounselorRegister = async () => {
     if (!selectedEmployee) {
       toast.callCommonToastOpen('등록할 직원을 선택해주세요.');
       return;
@@ -145,92 +145,92 @@ export default function AdminManagementPage() {
 
     try {
       setLoading(true);
-             const adminData = {
-         empId: selectedEmployee.eriEmpId, // ERI직원번호로 저장
-         eriEmpId: selectedEmployee.eriEmpId,
-         adminLevel: adminLevel
-         // regEmpId는 백엔드에서 세션의 EMP_ID를 사용
-       };
+      const counselorData = {
+        counselorEmpId: selectedEmployee.eriEmpId, // ERI직원번호로 저장
+        eriEmpId: selectedEmployee.eriEmpId,
+        counselorInfoClsfCd: counselorInfoClsf
+        // regEmpId는 백엔드에서 세션의 EMP_ID를 사용
+      };
 
-      const response = await createAdmin(adminData);
+      const response = await createCounselor(counselorData);
       if (response.success) {
-        toast.callCommonToastOpen('관리자가 성공적으로 등록되었습니다.');
+        toast.callCommonToastOpen('상담사가 성공적으로 등록되었습니다.');
         // 폼 초기화
         setSelectedEmployee(null);
-        setAdminLevel('ADMIN');
+        setCounselorInfoClsf('PROFESSIONAL');
         // 목록 새로고침
         fetchEmployees(employeePage, employeeSortKey, employeeSortOrder);
-        fetchAdmins(adminPage, adminSortKey, adminSortOrder);
+        fetchCounselors(counselorPage, counselorSortKey, counselorSortOrder);
       } else {
-        toast.callCommonToastOpen(response.message || '관리자 등록에 실패했습니다.');
+        toast.callCommonToastOpen(response.message || '상담사 등록에 실패했습니다.');
       }
     } catch (error) {
-      console.error('관리자 등록 실패:', error);
-      toast.callCommonToastOpen('관리자 등록 중 오류가 발생했습니다.');
+      console.error('상담사 등록 실패:', error);
+      toast.callCommonToastOpen('상담사 등록 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  // 관리자 수정 모드 시작
-  const handleEditStart = (admin) => {
-    setEditingAdmin(admin);
-    setEditingAdminLevel(admin.adminStsCd || 'ADMIN');
+  // 상담사 수정 모드 시작
+  const handleEditStart = (counselor) => {
+    setEditingCounselor(counselor);
+    setEditingCounselorInfoClsf(counselor.counselorInfoClsfCd || 'PROFESSIONAL');
   };
 
-  // 관리자 수정 모드 취소
+  // 상담사 수정 모드 취소
   const handleEditCancel = () => {
-    setEditingAdmin(null);
-    setEditingAdminLevel('ADMIN');
+    setEditingCounselor(null);
+    setEditingCounselorInfoClsf('PROFESSIONAL');
   };
 
-  // 관리자 수정
-  const handleAdminUpdate = async () => {
-    if (!editingAdmin) return;
+  // 상담사 수정
+  const handleCounselorUpdate = async () => {
+    if (!editingCounselor) return;
 
     try {
       setLoading(true);
-             const adminData = {
-         adminLevel: editingAdminLevel
-         // updEmpId는 백엔드에서 세션의 EMP_ID를 사용
-       };
+      const counselorData = {
+        counselorInfoClsfCd: editingCounselorInfoClsf
+        // updEmpId는 백엔드에서 세션의 EMP_ID를 사용
+      };
 
-      const response = await updateAdmin(editingAdmin.adminId, adminData);
+      const response = await updateCounselor(editingCounselor.counselorEmpId, counselorData);
       if (response.success) {
-        toast.callCommonToastOpen('관리자 정보가 성공적으로 수정되었습니다.');
-        setEditingAdmin(null);
-        setEditingAdminLevel('ADMIN');
-        fetchAdmins(adminPage, adminSortKey, adminSortOrder); // 목록 새로고침
+        toast.callCommonToastOpen('상담사 정보가 성공적으로 수정되었습니다.');
+        setEditingCounselor(null);
+        setEditingCounselorInfoClsf('PROFESSIONAL');
+        fetchCounselors(counselorPage, counselorSortKey, counselorSortOrder); // 목록 새로고침
       } else {
-        toast.callCommonToastOpen(response.message || '관리자 수정에 실패했습니다.');
+        toast.callCommonToastOpen(response.message || '상담사 수정에 실패했습니다.');
       }
     } catch (error) {
-      console.error('관리자 수정 실패:', error);
-      toast.callCommonToastOpen('관리자 수정 중 오류가 발생했습니다.');
+      console.error('상담사 수정 실패:', error);
+      toast.callCommonToastOpen('상담사 수정 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  // 관리자 삭제
-  const handleAdminDelete = async (adminId) => {
+  // 상담사 삭제
+  const handleCounselorDelete = async (counselorEmpId) => {
     // 공통 confirm 사용
-    alert.ConfirmOpen('관리자 삭제', '정말로 이 관리자를 삭제하시겠습니까?', {
+    alert.ConfirmOpen('상담사 삭제', '정말로 이 상담사를 삭제하시겠습니까?', {
       okLabel: '삭제',
       cancelLabel: '취소',
       okCallback: async () => {
         try {
           setLoading(true);
-          const response = await deleteAdmin(adminId);
+          const response = await deleteCounselor(counselorEmpId);
           if (response.success) {
-            toast.callCommonToastOpen('관리자가 성공적으로 삭제되었습니다.');
-            fetchAdmins(adminPage, adminSortKey, adminSortOrder); // 목록 새로고침
+            toast.callCommonToastOpen('상담사가 성공적으로 삭제되었습니다.');
+            fetchCounselors(counselorPage, counselorSortKey, counselorSortOrder); // 목록 새로고침
           } else {
-            toast.callCommonToastOpen(response.message || '관리자 삭제에 실패했습니다.');
+            toast.callCommonToastOpen(response.message || '상담사 삭제에 실패했습니다.');
           }
         } catch (error) {
-          console.error('관리자 삭제 실패:', error);
-          toast.callCommonToastOpen('관리자 삭제 중 오류가 발생했습니다.');
+          console.error('상담사 삭제 실패:', error);
+          toast.callCommonToastOpen('상담사 삭제 중 오류가 발생했습니다.');
         } finally {
           setLoading(false);
         }
@@ -238,14 +238,14 @@ export default function AdminManagementPage() {
     });
   };
 
-  // 관리자 목록 컬럼 정의
-  const adminColumns = [
-    { key: 'adminId', label: 'ERI직원번호' },
+  // 상담사 목록 컬럼 정의
+  const counselorColumns = [
+    { key: 'counselorEmpId', label: 'ERI직원번호' },
     { key: 'empNm', label: '직원명' },
     { key: 'blngBrcd', label: '소속부점' },
     { key: 'jbttCd', label: '직위' },
     { key: 'jbclCd', label: '직급' },
-    { key: 'adminStsCd', label: '관리자 레벨' },
+    { key: 'counselorInfoClsfCd', label: '상담자정보구분' },
     { key: 'regDate', label: '등록일' },
     { key: 'actions', label: '작업', width: '120px' }
   ];
@@ -259,28 +259,38 @@ export default function AdminManagementPage() {
     { key: 'blngBrcd', label: '소속부점' }
   ];
 
-  // 관리자 목록 커스텀 렌더링
-  const renderAdminCell = (row, col) => {
-    if (col.key === 'adminStsCd') {
-      if (editingAdmin?.adminId === row.adminId) {
+  // 상담사 목록 커스텀 렌더링
+  const renderCounselorCell = (row, col) => {
+    if (col.key === 'counselorInfoClsfCd') {
+      if (editingCounselor?.counselorEmpId === row.counselorEmpId) {
         return (
           <select
-            value={editingAdminLevel}
-            onChange={(e) => setEditingAdminLevel(e.target.value)}
+            value={editingCounselorInfoClsf}
+            onChange={(e) => setEditingCounselorInfoClsf(e.target.value)}
             className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="ADMIN">일반 관리자</option>
-            <option value="SUPER_ADMIN">최고 관리자</option>
+            <option value="PROFESSIONAL">전문상담사</option>
+            <option value="GENERAL">일반상담사</option>
+            <option value="INTERN">인턴</option>
           </select>
         );
       } else {
+        const counselorTypeText = {
+          'PROFESSIONAL': '전문상담사',
+          'GENERAL': '일반상담사',
+          'INTERN': '인턴'
+        };
+        const counselorTypeColor = {
+          'PROFESSIONAL': 'bg-red-100 text-red-800',
+          'GENERAL': 'bg-blue-100 text-blue-800',
+          'INTERN': 'bg-green-100 text-green-800'
+        };
+
         return (
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-            row.adminStsCd === 'SUPER_ADMIN'
-              ? 'bg-red-100 text-red-800'
-              : 'bg-blue-100 text-blue-800'
+            counselorTypeColor[row.counselorInfoClsfCd] || 'bg-gray-100 text-gray-800'
           }`}>
-            {row.adminStsCd === 'SUPER_ADMIN' ? '최고 관리자' : '일반 관리자'}
+            {counselorTypeText[row.counselorInfoClsfCd] || row.counselorInfoClsfCd || '-'}
           </span>
         );
       }
@@ -317,11 +327,11 @@ export default function AdminManagementPage() {
     }
 
     if (col.key === 'actions') {
-      if (editingAdmin?.adminId === row.adminId) {
+      if (editingCounselor?.counselorEmpId === row.counselorEmpId) {
         return (
           <div className="flex gap-2">
             <button
-              onClick={handleAdminUpdate}
+              onClick={handleCounselorUpdate}
               disabled={loading}
               className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-50"
             >
@@ -347,7 +357,7 @@ export default function AdminManagementPage() {
               수정
             </button>
             <button
-              onClick={() => handleAdminDelete(row.adminId)}
+              onClick={() => handleCounselorDelete(row.counselorEmpId)}
               disabled={loading}
               className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50"
             >
@@ -384,30 +394,30 @@ export default function AdminManagementPage() {
         <div className="max-w-7xl mx-auto">
           {/* 헤더 */}
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">관리자 관리</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">상담사 관리</h1>
             <p className="text-gray-600">
-              관리자 등록 및 관리자 목록을 조회하고 관리합니다.
+              상담사 등록 및 상담사 목록을 조회하고 관리합니다.
             </p>
           </div>
 
-          {/* 상단 영역: 관리자 목록과 관리자 등록 */}
+          {/* 상단 영역: 상담사 목록과 상담사 등록 */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-            {/* 관리자 목록 */}
+            {/* 상담사 목록 */}
             <div className="xl:col-span-2">
               <Board
-                title={`관리자 목록 (총 ${adminTotalElements}명)`}
+                title={`상담사 목록 (총 ${counselorTotalElements}명)`}
                 actions={
                   <div className="flex gap-2">
                     <input
                       type="text"
                       placeholder="ERI직원번호, 직원명, 소속부점 검색"
-                      value={adminSearchKeyword}
-                      onChange={(e) => setAdminSearchKeyword(e.target.value)}
+                      value={counselorSearchKeyword}
+                      onChange={(e) => setCounselorSearchKeyword(e.target.value)}
                       className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      onKeyPress={(e) => e.key === 'Enter' && handleAdminSearch()}
+                      onKeyPress={(e) => e.key === 'Enter' && handleCounselorSearch()}
                     />
                     <button
-                      onClick={handleAdminSearch}
+                      onClick={handleCounselorSearch}
                       disabled={loading}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50"
                     >
@@ -415,22 +425,22 @@ export default function AdminManagementPage() {
                     </button>
                   </div>
                 }
-                columns={adminColumns}
-                data={admins}
-                renderCell={renderAdminCell}
-                page={adminPage}
-                totalPages={adminTotalPages}
-                onPageChange={handleAdminPageChange}
-                sortKey={adminSortKey}
-                sortOrder={adminSortOrder}
-                onSortChange={handleAdminSortChange}
+                columns={counselorColumns}
+                data={counselors}
+                renderCell={renderCounselorCell}
+                page={counselorPage}
+                totalPages={counselorTotalPages}
+                onPageChange={handleCounselorPageChange}
+                sortKey={counselorSortKey}
+                sortOrder={counselorSortOrder}
+                onSortChange={handleCounselorSortChange}
                 className="h-fit"
               />
             </div>
 
-            {/* 관리자 등록 폼 */}
+            {/* 상담사 등록 폼 */}
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">관리자 등록</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">상담사 등록</h2>
 
               {selectedEmployee ? (
                 <div className="space-y-4">
@@ -458,28 +468,29 @@ export default function AdminManagementPage() {
                     </div>
                   </div>
 
-                  {/* 관리자 레벨 선택 */}
+                  {/* 상담자정보구분 선택 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      관리자 레벨 *
+                      상담자정보구분 *
                     </label>
                     <select
-                      value={adminLevel}
-                      onChange={(e) => setAdminLevel(e.target.value)}
+                      value={counselorInfoClsf}
+                      onChange={(e) => setCounselorInfoClsf(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="ADMIN">일반 관리자</option>
-                      <option value="SUPER_ADMIN">최고 관리자</option>
+                      <option value="PROFESSIONAL">전문상담사</option>
+                      <option value="GENERAL">일반상담사</option>
+                      <option value="INTERN">인턴</option>
                     </select>
                   </div>
 
                   {/* 등록 버튼 */}
                   <button
-                    onClick={handleAdminRegister}
+                    onClick={handleCounselorRegister}
                     disabled={loading}
                     className="w-full px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? '등록 중...' : '관리자 등록'}
+                    {loading ? '등록 중...' : '상담사 등록'}
                   </button>
                 </div>
               ) : (

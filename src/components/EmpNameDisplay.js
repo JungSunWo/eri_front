@@ -1,14 +1,14 @@
 'use client';
 
-import empNameCache from '@/common/empNameCache';
 import { useEffect, useState } from 'react';
 
 /**
- * 직원ID를 받아서 직원명을 표시하는 컴포넌트
+ * 직원ID와 직원명을 받아서 표시하는 컴포넌트
  *
  * @param {Object} props
  * @param {string} props.empId - 직원ID
- * @param {string} props.fallback - 캐시에 없을 때 표시할 텍스트 (기본값: 직원ID)
+ * @param {string} props.empName - 직원명 (백엔드에서 받은 값)
+ * @param {string} props.fallback - 직원명이 없을 때 표시할 텍스트 (기본값: 직원ID)
  * @param {string} props.className - 추가 CSS 클래스
  * @param {boolean} props.showId - 직원ID도 함께 표시할지 여부 (기본값: false)
  * @param {string} props.separator - 직원명과 ID 사이 구분자 (기본값: ' ')
@@ -16,35 +16,28 @@ import { useEffect, useState } from 'react';
  */
 export default function EmpNameDisplay({
   empId,
+  empName,
   fallback,
   className = '',
   showId = false,
   separator = ' ',
   loading = false
 }) {
-  const [empName, setEmpName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [displayName, setDisplayName] = useState('');
 
   useEffect(() => {
     if (!empId) {
-      setEmpName('');
+      setDisplayName('');
       return;
     }
 
-    // 캐시가 초기화되지 않았으면 로딩 상태로 표시
-    if (!empNameCache.isCacheInitialized()) {
-      setIsLoading(true);
-      setEmpName(fallback || empId);
-      return;
-    }
-
-    setIsLoading(false);
-    const name = empNameCache.getEmpName(empId);
-    setEmpName(name);
-  }, [empId, fallback]);
+    // 백엔드에서 받은 직원명이 있으면 사용, 없으면 fallback 또는 직원ID 사용
+    const name = empName || fallback || empId;
+    setDisplayName(name);
+  }, [empId, empName, fallback]);
 
   // 로딩 상태 표시
-  if (loading || isLoading) {
+  if (loading) {
     return (
       <span className={`inline-block animate-pulse bg-gray-200 rounded ${className}`}>
         <span className="invisible">{empId || '로딩중...'}</span>
@@ -61,8 +54,8 @@ export default function EmpNameDisplay({
   if (showId) {
     return (
       <span className={className}>
-        {empName}
-        {empName !== empId && (
+        {displayName}
+        {displayName !== empId && (
           <>
             {separator}
             <span className="text-gray-500 text-sm">({empId})</span>
@@ -73,7 +66,7 @@ export default function EmpNameDisplay({
   }
 
   // 직원명만 표시하는 경우
-  return <span className={className}>{empName}</span>;
+  return <span className={className}>{displayName}</span>;
 }
 
 /**
@@ -81,13 +74,14 @@ export default function EmpNameDisplay({
  *
  * @param {Object} props
  * @param {string} props.empId - 직원ID
+ * @param {string} props.empName - 직원명 (백엔드에서 받은 값)
  * @param {string} props.className - 추가 CSS 클래스
  */
-export function SimpleEmpName({ empId, className = '' }) {
+export function SimpleEmpName({ empId, empName, className = '' }) {
   if (!empId) return <span className={className}>-</span>;
 
-  const empName = empNameCache.getEmpName(empId);
-  return <span className={className}>{empName}</span>;
+  const displayName = empName || empId;
+  return <span className={className}>{displayName}</span>;
 }
 
 /**
@@ -95,21 +89,22 @@ export function SimpleEmpName({ empId, className = '' }) {
  *
  * @param {Object} props
  * @param {string} props.empId - 직원ID
+ * @param {string} props.empName - 직원명 (백엔드에서 받은 값)
  * @param {string} props.className - 추가 CSS 클래스
  * @param {string} props.tooltipClassName - 툴팁 CSS 클래스
  */
-export function EmpNameWithTooltip({ empId, className = '', tooltipClassName = '' }) {
+export function EmpNameWithTooltip({ empId, empName, className = '', tooltipClassName = '' }) {
   if (!empId) return <span className={className}>-</span>;
 
-  const empName = empNameCache.getEmpName(empId);
-  const showTooltip = empName !== empId; // 캐시에 있는 경우에만 툴팁 표시
+  const displayName = empName || empId;
+  const showTooltip = displayName !== empId; // 직원명이 있는 경우에만 툴팁 표시
 
   return (
     <span
       className={`${className} ${showTooltip ? 'cursor-help' : ''}`}
       title={showTooltip ? `직원ID: ${empId}` : undefined}
     >
-      {empName}
+      {displayName}
     </span>
   );
 }

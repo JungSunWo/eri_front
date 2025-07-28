@@ -358,15 +358,15 @@ const toast = {
         const toastElement = document.querySelector(PopID);
         if (!toastElement) {
             console.warn('Toast element not found:', PopID);
-            // 간단한 alert로 대체
-            alert(toastTitle);
+            // 공통 alert로 대체
+            alert.AlertOpen('알림', toastTitle);
             return;
         }
 
         const toastTextElement = document.querySelector(PopID + " .toastText");
         if (!toastTextElement) {
             console.warn('Toast text element not found:', PopID + " .toastText");
-            alert(toastTitle);
+            alert.AlertOpen('알림', toastTitle);
             return;
         }
 

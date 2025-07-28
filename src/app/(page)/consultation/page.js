@@ -1,6 +1,6 @@
 'use client';
 
-import empNameCache from '@/common/empNameCache';
+
 import { alert } from '@/common/ui_com';
 import Board from '@/components/Board';
 import ConsultationButton from '@/components/ConsultationButton';
@@ -40,10 +40,6 @@ const ConsultationPage = () => {
 
     // 컴포넌트 마운트 시 초기화
     useEffect(() => {
-        // 직원 캐시 상태 확인
-        const cacheStatus = empNameCache.getStatus();
-        console.log('직원 캐시 상태:', cacheStatus);
-
         fetchConsultationList();
         fetchCommonCodes();
     }, []);
@@ -217,6 +213,7 @@ const ConsultationPage = () => {
                                 (row.nickname ? `[익명(${row.nickname})] ` : '[익명] ') :
                                 <span>[                                <EmpNameDisplay
                                     empId={row.regEmpId}
+                                    empName={row.regEmpNm}
                                     showId={true}
                                     separator=" "
                                     fallback={`직원(${row.regEmpId})`}
@@ -428,6 +425,7 @@ const ConsultationPage = () => {
                                                                                                                                                                 <div className="text-lg font-medium text-gray-900">
                                                     <EmpNameDisplay
                                                         empId={selectedConsultation.regEmpId}
+                                                        empName={selectedConsultation.regEmpNm}
                                                         showId={true}
                                                         separator=" "
                                                         fallback={`직원(${selectedConsultation.regEmpId})`}

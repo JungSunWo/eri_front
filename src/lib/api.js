@@ -38,5 +38,10 @@ export { consultationAPI } from './api/consultationAPI';
 // 권한 관리 관련 API
 export { authManagementAPI, permissionAPI } from './api/authManagementAPI';
 
+// 관리자 관련 API
+export {
+    createAdmin, deleteAdmin, getAdminList, getEmployeeDetail, getEmployeeList, updateAdmin
+} from './api/adminAPI';
+
 // 기본 export (기존 코드 호환성)
 export { api as default } from './api/apiClient';

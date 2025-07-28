@@ -1,10 +1,10 @@
 'use client';
 
-import empNameCache from '@/common/empNameCache';
+
 import { usePageMoveStore } from '@/common/store/pageMoveStore';
 import EmpNameDisplay from '@/components/EmpNameDisplay';
 import PageWrapper from '@/components/layout/PageWrapper';
-import { authAPI, fileAPI, noticeAPI } from '@/lib/api';
+import { fileAPI, noticeAPI } from '@/lib/api';
 import { Download, FileText, Paperclip } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -45,23 +45,7 @@ export default function NoticeDetailPage({ params }) {
   const [attachments, setAttachments] = useState([]);
   const [loadingAttachments, setLoadingAttachments] = useState(false);
 
-  // 페이지 로드 시 직원 캐시 초기화
-  useEffect(() => {
-    const initializePage = async () => {
-      // 직원 캐시가 초기화되지 않았으면 초기화
-      if (!empNameCache.isCacheInitialized()) {
-        try {
-          const employeeCache = await authAPI.getEmployeeCache();
-          empNameCache.initialize(employeeCache);
-          console.log('직원 캐시 초기화 완료:', empNameCache.getSize(), '명');
-        } catch (error) {
-          console.error('직원 캐시 초기화 실패:', error);
-        }
-      }
-    };
 
-    initializePage();
-  }, []);
 
   useEffect(() => {
     // ID 유효성 검사
@@ -223,7 +207,7 @@ export default function NoticeDetailPage({ params }) {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  <span>작성자: <EmpNameDisplay empId={data.regEmpId} /></span>
+                  <span>작성자: <EmpNameDisplay empId={data.regEmpId} empName={data.regEmpNm} /></span>
                 </div>
                 <div className="flex items-center">
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,7 +230,7 @@ export default function NoticeDetailPage({ params }) {
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
-                    <span>수정자: <EmpNameDisplay empId={data.updEmpId} /></span>
+                    <span>수정자: <EmpNameDisplay empId={data.updEmpId} empName={data.updEmpNm} /></span>
                     {data.updDate && (
                       <span className="ml-4">수정일: {formatDate(data.updDate)}</span>
                     )}

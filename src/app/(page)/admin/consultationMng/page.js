@@ -1,6 +1,6 @@
 'use client';
 
-import empNameCache from '@/common/empNameCache';
+
 import { alert } from '@/common/ui_com';
 import AnonymousIdentityManager from '@/components/AnonymousIdentityManager';
 import Board from '@/components/Board';
@@ -321,6 +321,7 @@ const CounselingPage = () => {
                                 (row.nickname ? `익명(${row.nickname})` : '익명') :
                                 <EmpNameDisplay
                                     empId={row.regEmpId}
+                                    empName={row.regEmpNm}
                                     showId={true}
                                     separator=" "
                                     fallback={`직원(${row.regEmpId})`}
@@ -378,10 +379,6 @@ const CounselingPage = () => {
     };
 
     useEffect(() => {
-        // 직원 캐시 상태 확인
-        const cacheStatus = empNameCache.getStatus();
-        console.log('직원 캐시 상태:', cacheStatus);
-
         fetchConsultationList();
     }, []);
 
@@ -546,6 +543,7 @@ const CounselingPage = () => {
                                                                                                 <div className="text-lg font-medium text-gray-900">
                                                     <EmpNameDisplay
                                                         empId={selectedConsultation.regEmpId}
+                                                        empName={selectedConsultation.regEmpNm}
                                                         showId={true}
                                                         separator=" "
                                                         fallback={`직원(${selectedConsultation.regEmpId})`}
@@ -660,7 +658,7 @@ const CounselingPage = () => {
                                     <div className="mb-4">
                                         <div className="bg-white p-3 rounded border border-green-300">
                                             <div className="flex justify-between items-center text-sm text-gray-600">
-                                                <span>답변자: <EmpNameDisplay empId={selectedConsultation.answer.regEmpId} /></span>
+                                                <span>답변자: <EmpNameDisplay empId={selectedConsultation.answer.regEmpId} empName={selectedConsultation.answer.regEmpNm} /></span>
                                                 <span>답변일: {new Date(selectedConsultation.answer.regDate).toLocaleString()}</span>
                                             </div>
                                         </div>

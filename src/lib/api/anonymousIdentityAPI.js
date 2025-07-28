@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { api } from './apiClient';
 
 /**
  * 익명 사용자 동일성 판단 API
@@ -9,7 +9,7 @@ class AnonymousIdentityAPI {
      */
     async getGroupList(useYn = 'Y') {
         try {
-            const response = await apiClient.get('/api/anonymous-identity/groups', {
+            const response = await api.get('/api/anonymous-identity/groups', {
                 params: { useYn }
             });
             return response.data;
@@ -24,7 +24,7 @@ class AnonymousIdentityAPI {
      */
     async getGroupDetail(groupSeq) {
         try {
-            const response = await apiClient.get(`/api/anonymous-identity/groups/${groupSeq}`);
+            const response = await api.get(`/api/anonymous-identity/groups/${groupSeq}`);
             return response.data;
         } catch (error) {
             console.error('익명 사용자 동일성 그룹 상세 조회 오류:', error);
@@ -37,7 +37,7 @@ class AnonymousIdentityAPI {
      */
     async createGroup(groupData) {
         try {
-            const response = await apiClient.post('/api/anonymous-identity/groups', groupData);
+            const response = await api.post('/api/anonymous-identity/groups', groupData);
             return response.data;
         } catch (error) {
             console.error('익명 사용자 동일성 그룹 등록 오류:', error);
@@ -50,7 +50,7 @@ class AnonymousIdentityAPI {
      */
     async updateGroup(groupSeq, groupData) {
         try {
-            const response = await apiClient.put(`/api/anonymous-identity/groups/${groupSeq}`, groupData);
+            const response = await api.put(`/api/anonymous-identity/groups/${groupSeq}`, groupData);
             return response.data;
         } catch (error) {
             console.error('익명 사용자 동일성 그룹 수정 오류:', error);
@@ -63,7 +63,7 @@ class AnonymousIdentityAPI {
      */
     async deleteGroup(groupSeq, delEmpId) {
         try {
-            const response = await apiClient.delete(`/api/anonymous-identity/groups/${groupSeq}`, {
+            const response = await api.delete(`/api/anonymous-identity/groups/${groupSeq}`, {
                 params: { delEmpId }
             });
             return response.data;
@@ -78,7 +78,7 @@ class AnonymousIdentityAPI {
      */
     async getMemberList(groupSeq, useYn = 'Y') {
         try {
-            const response = await apiClient.get(`/api/anonymous-identity/groups/${groupSeq}/members`, {
+            const response = await api.get(`/api/anonymous-identity/groups/${groupSeq}/members`, {
                 params: { useYn }
             });
             return response.data;
@@ -93,7 +93,7 @@ class AnonymousIdentityAPI {
      */
     async addMemberToGroup(groupSeq, memberData) {
         try {
-            const response = await apiClient.post(`/api/anonymous-identity/groups/${groupSeq}/members`, memberData);
+            const response = await api.post(`/api/anonymous-identity/groups/${groupSeq}/members`, memberData);
             return response.data;
         } catch (error) {
             console.error('그룹 멤버 추가 오류:', error);
@@ -106,7 +106,7 @@ class AnonymousIdentityAPI {
      */
     async removeMemberFromGroup(groupSeq, anonymousId, delEmpId) {
         try {
-            const response = await apiClient.delete(`/api/anonymous-identity/groups/${groupSeq}/members/${anonymousId}`, {
+            const response = await api.delete(`/api/anonymous-identity/groups/${groupSeq}/members/${anonymousId}`, {
                 params: { delEmpId }
             });
             return response.data;
@@ -121,7 +121,7 @@ class AnonymousIdentityAPI {
      */
     async getGroupsByAnonymousId(anonymousId) {
         try {
-            const response = await apiClient.get(`/api/anonymous-identity/anonymous/${anonymousId}/groups`);
+            const response = await api.get(`/api/anonymous-identity/anonymous/${anonymousId}/groups`);
             return response.data;
         } catch (error) {
             console.error('익명 사용자 소속 그룹 조회 오류:', error);

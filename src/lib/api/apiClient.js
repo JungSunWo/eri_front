@@ -83,7 +83,8 @@ api.interceptors.request.use(
 /**
  * 응답 인터셉터 (에러 처리)
  * - 401 에러 시 자동 로그인 페이지 리다이렉트
- * - 에러 메시지 추출 및 사용자 알림 표시
+ * - 400 에러는 비즈니스 로직 오류이므로 자동 알림 표시하지 않음
+ * - 500 에러 등 서버 오류에 대해서만 자동 알림 표시
  * - 클라이언트/서버 사이드 구분하여 처리
  */
 api.interceptors.response.use(
@@ -92,14 +93,21 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // 세션 만료시 로그인 페이지로 리다이렉트 (로그인 페이지와 가이드 페이지가 아닌 경우에만)
       if (typeof window !== 'undefined') {
-        /*
+
         const currentPath = window.location.pathname;
         if (!currentPath.startsWith('/login')) {
           window.location.href = '/login';
         }
-          */
+
       }
     }
+
+    // 400 에러는 비즈니스 로직 오류이므로 자동 알림 표시하지 않음
+    // 각 API 함수에서 직접 처리하도록 함
+    if (error.response?.status === 400) {
+      return Promise.reject(error);
+    }
+
     // 에러 메시지 추출
     const message =
       error.response?.data?.message ||

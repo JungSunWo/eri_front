@@ -11,7 +11,6 @@
 
 'use client';
 
-import storage from '@/common/storage';
 import { toast } from '@/common/ui_com';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { CmpInput, CmpSelect, CmpTextarea } from '@/components/ui';
@@ -53,6 +52,28 @@ export default function EmployeeRightsBoardPage() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [fileErrors, setFileErrors] = useState({});
   const [fileLinks, setFileLinks] = useState({}); // 파일별 링크 정보 저장
+
+  // 글쓰기 모달용 파일 상태
+  const [writeModalFiles, setWriteModalFiles] = useState([]);
+  const [writeModalUploadingFiles, setWriteModalUploadingFiles] = useState(false);
+  const [writeModalFileErrors, setWriteModalFileErrors] = useState({});
+  const [writeModalFileLinks, setWriteModalFileLinks] = useState({});
+  const [writeModalPreviewFile, setWriteModalPreviewFile] = useState(null);
+  const [writeModalShowPreviewModal, setWriteModalShowPreviewModal] = useState(false);
+  const [writeModalShowTextModal, setWriteModalShowTextModal] = useState(false);
+  const [writeModalSelectedImageFile, setWriteModalSelectedImageFile] = useState(null);
+  const writeModalImageTextInputRef = useRef(null);
+
+  // 수정 모달용 파일 상태
+  const [editModalFiles, setEditModalFiles] = useState([]);
+  const [editModalUploadingFiles, setEditModalUploadingFiles] = useState(false);
+  const [editModalFileErrors, setEditModalFileErrors] = useState({});
+  const [editModalFileLinks, setEditModalFileLinks] = useState({});
+  const [editModalPreviewFile, setEditModalPreviewFile] = useState(null);
+  const [editModalShowPreviewModal, setEditModalShowPreviewModal] = useState(false);
+  const [editModalShowTextModal, setEditModalShowTextModal] = useState(false);
+  const [editModalSelectedImageFile, setEditModalSelectedImageFile] = useState(null);
+  const editModalImageTextInputRef = useRef(null);
 
   // 검색 및 필터 상태
   const [searchType, setSearchType] = useState('');
@@ -150,7 +171,12 @@ export default function EmployeeRightsBoardPage() {
       console.log('게시글 상세 API 응답:', result); // 디버깅용
 
       if (result && result.success) {
-        setSelectedBoard(result.data);
+        // 백엔드에서 전달받은 isAuthor 정보를 게시글 데이터에 추가
+        const boardData = {
+          ...result.data,
+          isAuthor: result.isAuthor || false
+        };
+        setSelectedBoard(boardData);
         setShowDetailModal(true);
         loadComments(boardSeq);
         loadFiles(boardSeq);
@@ -191,6 +217,8 @@ export default function EmployeeRightsBoardPage() {
         // 댓글을 계층 구조로 정렬
         const sortedComments = sortCommentsByHierarchy(Array.isArray(commentData) ? commentData : []);
         console.log('정렬된 댓글:', sortedComments); // 디버깅용
+
+        // 백엔드에서 전달받은 isAuthor 정보가 각 댓글에 포함되어 있음
         setComments(sortedComments);
       } else {
         console.error('댓글 목록 조회 실패:', result?.message || '알 수 없는 오류');
@@ -283,9 +311,37 @@ export default function EmployeeRightsBoardPage() {
       const result = await boardAPI.createBoard(boardForm);
 
       if (result && result.success) {
+        const boardSeq = result.data?.seq;
+
+        // 파일이 있으면 업로드
+        if (writeModalFiles.length > 0 && boardSeq) {
+          try {
+            const filesToUpload = writeModalFiles.map(file => file.file);
+            const uploadedFiles = await handleFileUpload(boardSeq, filesToUpload);
+
+            // 이미지 텍스트 링크 정보 업데이트
+            if (uploadedFiles && uploadedFiles.length > 0) {
+              for (let i = 0; i < uploadedFiles.length; i++) {
+                const uploadedFile = uploadedFiles[i];
+                const originalFile = writeModalFiles[i];
+                const links = writeModalFileLinks[originalFile.fileSeq];
+
+                if (links && links.length > 0) {
+                  const linkData = {
+                    links: JSON.stringify(links)
+                  };
+                  await boardAPI.updateFileLinks(uploadedFile.fileSeq, linkData);
+                }
+              }
+            }
+          } catch (fileError) {
+            console.error('파일 업로드 실패:', fileError);
+            displayToast('게시글은 등록되었지만 파일 업로드에 실패했습니다.');
+          }
+        }
+
         displayToast('게시글이 등록되었습니다.');
-        setShowWriteModal(false);
-        resetBoardForm();
+        resetWriteModal();
         loadBoardList();
       } else {
         displayToast('게시글 등록 실패: ' + (result?.message || '알 수 없는 오류'));
@@ -497,10 +553,37 @@ export default function EmployeeRightsBoardPage() {
       const result = await boardAPI.updateBoard(selectedBoard.seq, updateData);
 
       if (result && result.success) {
+        const boardSeq = selectedBoard.seq;
+
+        // 파일이 있으면 업로드
+        if (editModalFiles.length > 0 && boardSeq) {
+          try {
+            const filesToUpload = editModalFiles.map(file => file.file);
+            const uploadedFiles = await handleFileUpload(boardSeq, filesToUpload);
+
+            // 이미지 텍스트 링크 정보 업데이트
+            if (uploadedFiles && uploadedFiles.length > 0) {
+              for (let i = 0; i < uploadedFiles.length; i++) {
+                const uploadedFile = uploadedFiles[i];
+                const originalFile = editModalFiles[i];
+                const links = editModalFileLinks[originalFile.fileSeq];
+
+                if (links && links.length > 0) {
+                  const linkData = {
+                    links: JSON.stringify(links)
+                  };
+                  await boardAPI.updateFileLinks(uploadedFile.fileSeq, linkData);
+                }
+              }
+            }
+          } catch (fileError) {
+            console.error('파일 업로드 실패:', fileError);
+            displayToast('게시글은 수정되었지만 파일 업로드에 실패했습니다.');
+          }
+        }
+
         displayToast('게시글이 수정되었습니다.');
-        setShowEditModal(false);
-        setIsEditMode(false);
-        resetBoardForm();
+        resetEditModal();
         // 상세 정보 새로고침
         showBoardDetail(selectedBoard.seq);
         // 목록 새로고침
@@ -537,20 +620,11 @@ export default function EmployeeRightsBoardPage() {
   };
 
   // 현재 로그인한 사용자 ID 가져오기 (storage 컴포넌트 사용)
-  const getCurrentUserId = () => {
-    // storage 컴포넌트에서 사용자 정보 가져오기
-    const userInfo = storage().getItem('user');
-    if (userInfo) {
-      // storage 컴포넌트가 이미 파싱된 객체를 반환하므로 JSON.parse 불필요
-      return userInfo.userId; // 로그인 시 저장한 userId 사용
-    }
-    return null;
-  };
-
-  // 작성자 본인인지 확인
-  const isAuthor = (boardAuthorId) => {
-    const currentUserId = getCurrentUserId();
-    return currentUserId && boardAuthorId && currentUserId === boardAuthorId;
+  // 작성자 본인인지 확인 (백엔드에서 전달받은 isAuthor 정보 사용)
+  const isAuthor = (boardAuthorId, isAuthorFromServer) => {
+    // 백엔드에서 세션을 통해 작성자 확인을 처리하므로
+    // 서버에서 전달받은 isAuthor 정보를 사용
+    return isAuthorFromServer || false;
   };
 
   // 폼 초기화
@@ -561,6 +635,43 @@ export default function EmployeeRightsBoardPage() {
       categoryCd: '',
       noticeYn: 'N'
     });
+  };
+
+  // 글쓰기 모달 초기화 함수
+  const resetWriteModal = () => {
+    setShowWriteModal(false);
+    resetBoardForm();
+    // 글쓰기 모달 파일 상태 초기화
+    setWriteModalFiles([]);
+    setWriteModalFileLinks({});
+    setWriteModalFileErrors({});
+    setWriteModalUploadingFiles(false);
+    setWriteModalShowPreviewModal(false);
+    setWriteModalShowTextModal(false);
+    setWriteModalSelectedImageFile(null);
+    // 이미지 텍스트 입력 ref 초기화
+    if (writeModalImageTextInputRef.current) {
+      writeModalImageTextInputRef.current.value = '';
+    }
+  };
+
+  // 수정 모달 초기화 함수
+  const resetEditModal = () => {
+    setShowEditModal(false);
+    setIsEditMode(false);
+    resetBoardForm();
+    // 수정 모달 파일 상태 초기화
+    setEditModalFiles([]);
+    setEditModalFileLinks({});
+    setEditModalFileErrors({});
+    setEditModalUploadingFiles(false);
+    setEditModalShowPreviewModal(false);
+    setEditModalShowTextModal(false);
+    setEditModalSelectedImageFile(null);
+    // 이미지 텍스트 입력 ref 초기화
+    if (editModalImageTextInputRef.current) {
+      editModalImageTextInputRef.current.value = '';
+    }
   };
 
   const resetCommentForm = () => {
@@ -875,6 +986,210 @@ export default function EmployeeRightsBoardPage() {
   const imageTextInputRef = useRef(null);
 
   // 이미지 텍스트 추가 처리
+    // 글쓰기 모달용 파일 업로드 처리
+  const handleWriteModalFileUpload = async (selectedFiles) => {
+    // null, undefined, 또는 빈 값 체크
+    if (!selectedFiles) {
+      return;
+    }
+
+    // FileList를 Array로 변환
+    const filesArray = Array.from(selectedFiles || []);
+
+    if (!filesArray || filesArray.length === 0) return;
+
+    // 파일 크기 체크 (50MB = 52428800 bytes)
+    const maxFileSize = 52428800;
+    const oversizedFiles = [];
+
+    for (let i = 0; i < filesArray.length; i++) {
+      if (filesArray[i].size > maxFileSize) {
+        oversizedFiles.push(filesArray[i].name);
+      }
+    }
+
+    if (oversizedFiles.length > 0) {
+      displayToast(`파일 크기 초과: ${oversizedFiles.join(', ')} (최대 50MB)`);
+      return;
+    }
+
+    setWriteModalUploadingFiles(true);
+    try {
+      // 임시로 파일 정보를 로컬에 저장 (실제 업로드는 게시글 등록 시)
+      const tempFiles = filesArray.map((file, index) => ({
+        fileSeq: `temp_${Date.now()}_${index}`,
+        originalFileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        file: file // 실제 File 객체 저장
+      }));
+
+      setWriteModalFiles(prev => [...prev, ...tempFiles]);
+      displayToast('파일이 추가되었습니다. (게시글 등록 시 업로드됩니다)');
+    } catch (error) {
+      console.error('파일 추가 실패:', error);
+      displayToast('파일 추가 실패: ' + error.message);
+    } finally {
+      setWriteModalUploadingFiles(false);
+    }
+  };
+
+  // 글쓰기 모달용 파일 삭제
+  const handleWriteModalFileDelete = (fileSeq) => {
+    setWriteModalFiles(prev => prev.filter(file => file.fileSeq !== fileSeq));
+    setWriteModalFileLinks(prev => {
+      const newLinks = { ...prev };
+      delete newLinks[fileSeq];
+      return newLinks;
+    });
+    displayToast('파일이 제거되었습니다.');
+  };
+
+  // 글쓰기 모달용 이미지 텍스트 처리
+    // 수정 모달용 파일 업로드 처리
+  const handleEditModalFileUpload = async (selectedFiles) => {
+    // null, undefined, 또는 빈 값 체크
+    if (!selectedFiles) {
+      return;
+    }
+
+    // FileList를 Array로 변환
+    const filesArray = Array.from(selectedFiles || []);
+
+    if (!filesArray || filesArray.length === 0) return;
+
+    // 파일 크기 체크 (50MB = 52428800 bytes)
+    const maxFileSize = 52428800;
+    const oversizedFiles = [];
+
+    for (let i = 0; i < filesArray.length; i++) {
+      if (filesArray[i].size > maxFileSize) {
+        oversizedFiles.push(filesArray[i].name);
+      }
+    }
+
+    if (oversizedFiles.length > 0) {
+      displayToast(`파일 크기 초과: ${oversizedFiles.join(', ')} (최대 50MB)`);
+      return;
+    }
+
+    setEditModalUploadingFiles(true);
+    try {
+      // 임시로 파일 정보를 로컬에 저장 (실제 업로드는 게시글 수정 시)
+      const tempFiles = filesArray.map((file, index) => ({
+        fileSeq: `temp_${Date.now()}_${index}`,
+        originalFileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        file: file // 실제 File 객체 저장
+      }));
+
+      setEditModalFiles(prev => [...prev, ...tempFiles]);
+      displayToast('파일이 추가되었습니다. (게시글 수정 시 업로드됩니다)');
+    } catch (error) {
+      console.error('파일 추가 실패:', error);
+      displayToast('파일 추가 실패: ' + error.message);
+    } finally {
+      setEditModalUploadingFiles(false);
+    }
+  };
+
+  // 수정 모달용 파일 삭제
+  const handleEditModalFileDelete = (fileSeq) => {
+    setEditModalFiles(prev => prev.filter(file => file.fileSeq !== fileSeq));
+    setEditModalFileLinks(prev => {
+      const newLinks = { ...prev };
+      delete newLinks[fileSeq];
+      return newLinks;
+    });
+    displayToast('파일이 제거되었습니다.');
+  };
+
+  // 수정 모달용 이미지 텍스트 처리
+  const handleEditModalImageTextConfirm = async (result) => {
+    console.log('Edit modal - Received result:', result);
+
+    if (!result || typeof result !== 'object') {
+      console.error('Invalid result:', result);
+      displayToast('이미지 처리 중 오류가 발생했습니다.');
+      return;
+    }
+
+    const { imageFile, links } = result;
+
+    if (!imageFile || !(imageFile instanceof File)) {
+      console.error('Invalid image file:', imageFile);
+      displayToast('이미지 처리 중 오류가 발생했습니다.');
+      return;
+    }
+
+    // 임시 파일로 저장
+    const tempFile = {
+      fileSeq: `temp_${Date.now()}_image`,
+      originalFileName: imageFile.name,
+      fileSize: imageFile.size,
+      fileType: imageFile.type,
+      file: imageFile,
+      links: Array.isArray(links) ? links : []
+    };
+
+    setEditModalFiles(prev => [...prev, tempFile]);
+    setEditModalFileLinks(prev => ({
+      ...prev,
+      [tempFile.fileSeq]: tempFile.links
+    }));
+
+    displayToast('이미지에 텍스트와 링크가 추가되었습니다.');
+    setEditModalShowTextModal(false);
+    setEditModalSelectedImageFile(null);
+
+    if (editModalImageTextInputRef.current) {
+      editModalImageTextInputRef.current.value = '';
+    }
+  };
+
+  const handleWriteModalImageTextConfirm = async (result) => {
+    console.log('Write modal - Received result:', result);
+
+    if (!result || typeof result !== 'object') {
+      console.error('Invalid result:', result);
+      displayToast('이미지 처리 중 오류가 발생했습니다.');
+      return;
+    }
+
+    const { imageFile, links } = result;
+
+    if (!imageFile || !(imageFile instanceof File)) {
+      console.error('Invalid image file:', imageFile);
+      displayToast('이미지 처리 중 오류가 발생했습니다.');
+      return;
+    }
+
+    // 임시 파일로 저장
+    const tempFile = {
+      fileSeq: `temp_${Date.now()}_image`,
+      originalFileName: imageFile.name,
+      fileSize: imageFile.size,
+      fileType: imageFile.type,
+      file: imageFile,
+      links: Array.isArray(links) ? links : []
+    };
+
+    setWriteModalFiles(prev => [...prev, tempFile]);
+    setWriteModalFileLinks(prev => ({
+      ...prev,
+      [tempFile.fileSeq]: tempFile.links
+    }));
+
+    displayToast('이미지에 텍스트와 링크가 추가되었습니다.');
+    setWriteModalShowTextModal(false);
+    setWriteModalSelectedImageFile(null);
+
+    if (writeModalImageTextInputRef.current) {
+      writeModalImageTextInputRef.current.value = '';
+    }
+  };
+
   const handleImageTextConfirm = async (result) => {
     console.log('Received result:', result);
     console.log('Result type:', typeof result);
@@ -1143,7 +1458,7 @@ export default function EmployeeRightsBoardPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">✍️ 게시글 작성</h2>
               <button
-                onClick={() => setShowWriteModal(false)}
+                onClick={resetWriteModal}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <X className="w-6 h-6" />
@@ -1195,9 +1510,81 @@ export default function EmployeeRightsBoardPage() {
                 </div>
               </div>
 
+              {/* 파일 업로드 섹션 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">파일 첨부</label>
+                <div className="space-y-3">
+                  {/* 파일 업로드 버튼들 */}
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                      <Upload className="w-4 h-4" />
+                      파일 업로드
+                      <input
+                        type="file"
+                        multiple
+                        onChange={(e) => handleWriteModalFileUpload(e.target.files)}
+                        className="hidden"
+                        accept="*/*"
+                      />
+                    </label>
+                    <label className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                      <Image className="w-4 h-4" />
+                      이미지 텍스트 추가
+                      <input
+                        type="file"
+                        ref={writeModalImageTextInputRef}
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setWriteModalSelectedImageFile(e.target.files[0]);
+                            setWriteModalShowTextModal(true);
+                          }
+                        }}
+                        className="hidden"
+                        accept="image/*"
+                      />
+                    </label>
+                  </div>
+
+                  {/* 업로드 중 표시 */}
+                  {writeModalUploadingFiles && (
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      파일 처리 중...
+                    </div>
+                  )}
+
+                  {/* 파일 목록 */}
+                  {writeModalFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-gray-700">첨부된 파일 ({writeModalFiles.length}개)</h4>
+                      <div className="space-y-2">
+                        {writeModalFiles.map((file) => (
+                          <div key={file.fileSeq} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              {getFileIcon(file.fileType)}
+                              <span className="text-sm text-gray-700">{file.originalFileName}</span>
+                              <span className="text-xs text-gray-500">({formatFileSize(file.fileSize)})</span>
+                              {writeModalFileLinks[file.fileSeq] && writeModalFileLinks[file.fileSeq].length > 0 && (
+                                <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">텍스트 추가됨</span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleWriteModalFileDelete(file.fileSeq)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2 pt-4">
                 <button
-                  onClick={() => setShowWriteModal(false)}
+                  onClick={resetWriteModal}
                   className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
                 >
                   취소
@@ -1221,12 +1608,7 @@ export default function EmployeeRightsBoardPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">✏️ 게시글 수정</h2>
               <button
-                onClick={() => {
-                  setShowEditModal(false);
-                  setIsEditMode(false);
-                  resetBoardForm();
-                  // 상세 모달은 그대로 유지
-                }}
+                onClick={resetEditModal}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <X className="w-6 h-6" />
@@ -1279,14 +1661,81 @@ export default function EmployeeRightsBoardPage() {
                 </div>
               </div>
 
+              {/* 파일 업로드 섹션 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">파일 첨부</label>
+                <div className="space-y-3">
+                  {/* 파일 업로드 버튼들 */}
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                      <Upload className="w-4 h-4" />
+                      파일 업로드
+                      <input
+                        type="file"
+                        multiple
+                        onChange={(e) => handleEditModalFileUpload(e.target.files)}
+                        className="hidden"
+                        accept="*/*"
+                      />
+                    </label>
+                    <label className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                      <Image className="w-4 h-4" />
+                      이미지 텍스트 추가
+                      <input
+                        type="file"
+                        ref={editModalImageTextInputRef}
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setEditModalSelectedImageFile(e.target.files[0]);
+                            setEditModalShowTextModal(true);
+                          }
+                        }}
+                        className="hidden"
+                        accept="image/*"
+                      />
+                    </label>
+                  </div>
+
+                  {/* 업로드 중 표시 */}
+                  {editModalUploadingFiles && (
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      파일 처리 중...
+                    </div>
+                  )}
+
+                  {/* 파일 목록 */}
+                  {editModalFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-gray-700">첨부된 파일 ({editModalFiles.length}개)</h4>
+                      <div className="space-y-2">
+                        {editModalFiles.map((file) => (
+                          <div key={file.fileSeq} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              {getFileIcon(file.fileType)}
+                              <span className="text-sm text-gray-700">{file.originalFileName}</span>
+                              <span className="text-xs text-gray-500">({formatFileSize(file.fileSize)})</span>
+                              {editModalFileLinks[file.fileSeq] && editModalFileLinks[file.fileSeq].length > 0 && (
+                                <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">텍스트 추가됨</span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleEditModalFileDelete(file.fileSeq)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2 pt-4">
                 <button
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setIsEditMode(false);
-                    resetBoardForm();
-                    // 상세 모달은 그대로 유지
-                  }}
+                  onClick={resetEditModal}
                   className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
                 >
                   취소
@@ -1420,7 +1869,7 @@ export default function EmployeeRightsBoardPage() {
                 <h4 className="text-base sm:text-lg font-semibold mb-3">📎 첨부파일</h4>
 
                 {/* 파일 업로드 (작성자만) */}
-                {isAuthor(selectedBoard.regEmpId) && (
+                {isAuthor(selectedBoard.regEmpId, selectedBoard.isAuthor) && (
                   <div className="mb-4 p-4 border-2 border-dashed border-gray-300 rounded-lg">
                     <div className="flex items-center justify-center gap-2">
                       <input
@@ -1494,7 +1943,7 @@ export default function EmployeeRightsBoardPage() {
                                <Download className="w-3 h-3" />
                                다운로드
                              </button>
-                             {isAuthor(selectedBoard.regEmpId) && (
+                             {isAuthor(selectedBoard.regEmpId, selectedBoard.isAuthor) && (
                                <button
                                  onClick={() => handleFileDelete(file.fileSeq)}
                                  className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 flex items-center gap-1"
@@ -1662,7 +2111,7 @@ export default function EmployeeRightsBoardPage() {
                   좋아요
                 </button>
 
-                {isAuthor(selectedBoard.regEmpId) && (
+                {isAuthor(selectedBoard.regEmpId, selectedBoard.isAuthor) && (
                   <>
                     <button
                       onClick={() => openEditModal(selectedBoard)}
@@ -1745,7 +2194,7 @@ export default function EmployeeRightsBoardPage() {
                               >
                                 답글
                               </button>
-                              {isAuthor(comment.regEmpId) && (
+                              {isAuthor(comment.regEmpId, comment.isAuthor) && (
                                 <>
                                   <button
                                     onClick={() => openCommentEditModal(comment)}
@@ -1861,6 +2310,36 @@ export default function EmployeeRightsBoardPage() {
         }}
         imageFile={selectedImageFile}
         onConfirm={handleImageTextConfirm}
+      />
+
+      {/* 글쓰기 모달용 이미지 텍스트 추가 모달 */}
+      <ImageTextModal
+        isOpen={writeModalShowTextModal}
+        onClose={() => {
+          setWriteModalShowTextModal(false);
+          setWriteModalSelectedImageFile(null);
+          // 파일 input 초기화
+          if (writeModalImageTextInputRef.current) {
+            writeModalImageTextInputRef.current.value = '';
+          }
+        }}
+        imageFile={writeModalSelectedImageFile}
+        onConfirm={handleWriteModalImageTextConfirm}
+      />
+
+      {/* 수정 모달용 이미지 텍스트 추가 모달 */}
+      <ImageTextModal
+        isOpen={editModalShowTextModal}
+        onClose={() => {
+          setEditModalShowTextModal(false);
+          setEditModalSelectedImageFile(null);
+          // 파일 input 초기화
+          if (editModalImageTextInputRef.current) {
+            editModalImageTextInputRef.current.value = '';
+          }
+        }}
+        imageFile={editModalSelectedImageFile}
+        onConfirm={handleEditModalImageTextConfirm}
       />
 
       {/* 파일 미리보기 모달 */}

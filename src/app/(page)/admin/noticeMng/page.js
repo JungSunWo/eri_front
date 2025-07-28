@@ -1,23 +1,23 @@
 'use client';
 
-import empNameCache from '@/common/empNameCache';
+
 import { toast } from '@/common/ui_com';
 import EmpNameDisplay from '@/components/EmpNameDisplay';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { CmpBadge, CmpInput, CmpSelect, CmpTextarea, CommonModal } from '@/components/ui';
-import { authAPI, fileAPI, noticeAPI } from '@/lib/api';
+import { fileAPI, noticeAPI } from '@/lib/api';
 import {
-  Calendar,
-  Download,
-  Edit,
-  FileText,
-  Paperclip,
-  Plus,
-  Search,
-  Trash2,
-  Upload,
-  User,
-  X
+    Calendar,
+    Download,
+    Edit,
+    FileText,
+    Paperclip,
+    Plus,
+    Search,
+    Trash2,
+    Upload,
+    User,
+    X
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -52,25 +52,9 @@ export default function NoticeManagementPage() {
 
   const fileInputRef = useRef(null);
 
-  // 페이지 로드 시 공지사항 목록 조회 및 직원 캐시 초기화
+  // 페이지 로드 시 공지사항 목록 조회
   useEffect(() => {
-    const initializePage = async () => {
-      // 직원 캐시가 초기화되지 않았으면 초기화
-      if (!empNameCache.isCacheInitialized()) {
-        try {
-          const employeeCache = await authAPI.getEmployeeCache();
-          empNameCache.initialize(employeeCache);
-          console.log('직원 캐시 초기화 완료:', empNameCache.getSize(), '명');
-        } catch (error) {
-          console.error('직원 캐시 초기화 실패:', error);
-        }
-      }
-
-      // 공지사항 목록 조회
-      loadNoticeList();
-    };
-
-    initializePage();
+    loadNoticeList();
   }, []);
 
   // 모달 상태 디버깅
@@ -158,9 +142,7 @@ export default function NoticeManagementPage() {
           seq: notice.seq,
           title: notice.ttl,
           regEmpId: notice.regEmpId,
-          regEmpName: empNameCache.getEmpName(notice.regEmpId),
           updEmpId: notice.updEmpId,
-          updEmpName: notice.updEmpId ? empNameCache.getEmpName(notice.updEmpId) : null,
           regDate: notice.regDate,
           updDate: notice.updDate
         });
@@ -735,12 +717,12 @@ export default function NoticeManagementPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     <User className="w-4 h-4" />
-                    <span>작성자: <EmpNameDisplay empId={notice.regEmpId} /></span>
+                    <span>작성자: <EmpNameDisplay empId={notice.regEmpId} empName={notice.regEmpNm} /></span>
                   </div>
                   {notice.updEmpId && notice.updEmpId !== notice.regEmpId && (
                     <div className="flex items-center gap-1">
                       <Edit className="w-4 h-4" />
-                      <span>수정자: <EmpNameDisplay empId={notice.updEmpId} /></span>
+                      <span>수정자: <EmpNameDisplay empId={notice.updEmpId} empName={notice.updEmpNm} /></span>
                     </div>
                   )}
                   <div className="flex items-center gap-1">

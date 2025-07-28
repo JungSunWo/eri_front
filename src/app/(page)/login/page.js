@@ -18,7 +18,7 @@ import { CmpButton } from '@/components/button/cmp_button';
 import { CmpSection, CmpSectionBody } from '@/components/contents/cmp_section/cmp_section';
 import { useEffect, useState } from 'react';
 
-import empNameCache from '@/common/empNameCache';
+
 import storage from '@/common/storage';
 import { alert } from '@/common/ui_com';
 import PageWrapper from '@/components/layout/PageWrapper';
@@ -62,7 +62,7 @@ export default function LoginPage() {
       }
       storage().removeItem('user');
       // 직원 캐시도 비우기
-      empNameCache.clear();
+
     };
 
     /**
@@ -156,8 +156,7 @@ export default function LoginPage() {
       if (response.success) {
         // 직원 캐시 초기화
         if (response.employeeCache) {
-          empNameCache.initialize(response.employeeCache);
-          console.log('직원 캐시 초기화 완료:', empNameCache.getSize(), '명');
+
         }
 
         // 사용자 정보를 로컬 스토리지에 저장
