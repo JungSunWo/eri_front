@@ -127,8 +127,8 @@ const CmpInput = forwardRef(({
     // 기본 스타일 (로그인 직원번호 입력란 기준)
     // text 타입은 로그인 페이지 스타일, 나머지는 일반 스타일 적용
     const baseInputStyle = type === 'text'
-        ? 'w-full h-12 px-4 border border-gray-300 rounded-none bg-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-400'
-        : 'w-full px-3 py-2 border border-gray-300 rounded bg-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-400';
+        ? 'w-full h-12 px-4 border border-gray-300 rounded-none bg-white text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-400'
+        : 'w-full px-3 py-2 border border-gray-300 rounded bg-white text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-400';
 
     // 실제 input type 결정 (비밀번호 표시/숨김 처리)
     const inputTypeFinal = type === 'password' ? (showPassword ? 'text' : 'password') : type;

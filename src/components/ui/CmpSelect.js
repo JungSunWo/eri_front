@@ -65,6 +65,7 @@ const CmpSelect = ({
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
           rounded-md transition-colors duration-200
           focus:outline-none focus:ring-2 focus:ring-opacity-50
+          text-gray-900
         `}
         {...props}
       >

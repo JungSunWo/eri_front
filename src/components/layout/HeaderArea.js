@@ -97,7 +97,10 @@ export default function HeaderArea() {
                 <li key={menu.mnuCd || idx}>
                   <button
                     type="button"
-                    className={`font-bold ${activeMenu === idx ? 'text-blue-600 underline' : ''} ${menu.mnuAdminYn === 'Y' ? 'text-blue-600' : ''}`}
+                    className={`font-bold ${activeMenu === idx ? 'text-blue-600 underline' : ''} ${
+                      menu.mnuNm === '상담 페이지' ? 'text-green-600' :
+                      menu.mnuNm === '관리자 페이지' ? 'text-blue-600' : ''
+                    }`}
                     onClick={() => setActiveMenu(idx)}
                   >
                     {menu.mnuNm}
@@ -108,7 +111,7 @@ export default function HeaderArea() {
               <>
                 <li><span className="hover:text-blue-700 cursor-pointer">프로그램</span></li>
                 <li><span className="hover:text-blue-700 cursor-pointer">IBK마음건강검진</span></li>
-                <li><span className="hover:text-blue-700 cursor-pointer">상담신청</span></li>
+                <li><span className="hover:text-green-700 cursor-pointer">상담 페이지</span></li>
                 <li><span className="hover:text-blue-700 cursor-pointer">자료실</span></li>
                 <li><span className="hover:text-blue-700 cursor-pointer">설정하기</span></li>
               </>
@@ -176,10 +179,10 @@ export default function HeaderArea() {
                 </div>
               ))}
             </div>
-            {/* 상담신청 메뉴가 활성화된 경우 하단에 상담 신청 현황 표시 */}
-            {activeMenus[activeMenu] && activeMenus[activeMenu].mnuNm === '상담신청' && (
+            {/* 상담 페이지 메뉴가 활성화된 경우 하단에 상담 신청 현황 표시 */}
+            {activeMenus[activeMenu] && activeMenus[activeMenu].mnuNm === '상담 페이지' && (
               <div className="mt-4 text-center">
-                <span className="text-blue-600 underline font-bold">상담 신청 현황</span>
+                <span className="text-green-600 underline font-bold">상담 신청 현황</span>
               </div>
             )}
           </div>

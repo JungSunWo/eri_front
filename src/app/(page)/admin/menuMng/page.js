@@ -65,7 +65,7 @@ export default function MenuManagementPage() {
     pMnuCd: '',
     mnuOrd: 1,
     mnuUseYn: 'Y',
-    mnuAdminYn: 'N'
+    mnuAuthType: 'USER'
   });
 
   // 메뉴 레벨 옵션
@@ -85,6 +85,13 @@ export default function MenuManagementPage() {
   const adminYnOptions = [
     { value: 'N', label: '일반사용자' },
     { value: 'Y', label: '관리자전용' }
+  ];
+
+  // 메뉴권한구분 옵션
+  const authTypeOptions = [
+    { value: 'USER', label: '일반사용자' },
+    { value: 'COUNSELOR', label: '상담사' },
+    { value: 'ADMIN', label: '관리자' }
   ];
 
   // 드래그 가능한 트리 노드 컴포넌트
@@ -162,8 +169,17 @@ export default function MenuManagementPage() {
           <CmpBadge variant={menu.mnuUseYn === 'Y' ? 'default' : 'destructive'} className="text-xs">
             {menu.mnuUseYnText}
           </CmpBadge>
-          <CmpBadge variant={menu.mnuAdminYn === 'Y' ? 'secondary' : 'default'} className="text-xs">
-            {menu.mnuAdminYnText}
+          <CmpBadge
+            variant={
+              menu.mnuAuthType === 'ADMIN' ? 'secondary' :
+              menu.mnuAuthType === 'COUNSELOR' ? 'outline' :
+              'default'
+            }
+            className={`text-xs ${
+              menu.mnuAuthType === 'COUNSELOR' ? 'border-green-500 text-green-600 bg-green-50' : ''
+            }`}
+          >
+            {menu.mnuAuthTypeText}
           </CmpBadge>
         </div>
       </div>
@@ -325,7 +341,7 @@ export default function MenuManagementPage() {
       pMnuCd: parentMenuCode || '',
       mnuOrd: menu.mnuOrd,
       mnuUseYn: menu.mnuUseYn,
-      mnuAdminYn: menu.mnuAdminYn
+      mnuAuthType: menu.mnuAuthType
     });
 
     // 하위 메뉴인 경우 상위 메뉴 목록 로드
@@ -352,7 +368,7 @@ export default function MenuManagementPage() {
       pMnuCd: '',
       mnuOrd: 1,
       mnuUseYn: 'Y',
-      mnuAdminYn: 'N'
+      mnuAuthType: 'USER'
     });
     // 상위 메뉴 목록 다시 로드
     loadParentMenus();
@@ -389,7 +405,7 @@ export default function MenuManagementPage() {
       pMnuCd: parentMenuCode || '',
       mnuOrd: selectedMenu.mnuOrd,
       mnuUseYn: selectedMenu.mnuUseYn,
-      mnuAdminYn: selectedMenu.mnuAdminYn
+      mnuAuthType: selectedMenu.mnuAuthType
     };
 
     console.log('수정 모드 - 설정할 폼 데이터:', newFormData);
@@ -466,7 +482,7 @@ export default function MenuManagementPage() {
           pMnuCd: formData.pMnuCd || null,  // 명시적으로 null 처리
           mnuOrd: formData.mnuOrd,
           mnuUseYn: formData.mnuUseYn,
-          mnuAdminYn: formData.mnuAdminYn
+          mnuAuthType: formData.mnuAuthType
         };
 
         console.log('백엔드로 전송할 정리된 데이터:', updateData);
@@ -492,7 +508,7 @@ export default function MenuManagementPage() {
           pMnuCd: formData.pMnuCd || null,  // 명시적으로 null 처리
           mnuOrd: formData.mnuOrd,
           mnuUseYn: formData.mnuUseYn,
-          mnuAdminYn: formData.mnuAdminYn
+          mnuAuthType: formData.mnuAuthType
         };
 
         console.log('백엔드로 전송할 정리된 데이터 (등록):', createData);
@@ -935,14 +951,14 @@ export default function MenuManagementPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="mnuAdminYn" className="block text-sm font-medium text-gray-700 mb-1">
-                    관리자전용
+                  <label htmlFor="mnuAuthType" className="block text-sm font-medium text-gray-700 mb-1">
+                    메뉴권한구분
                   </label>
-                                      <CmpSelect
-                      value={formData.mnuAdminYn}
-                      onChange={(value) => setFormData({...formData, mnuAdminYn: value})}
-                      options={adminYnOptions}
-                    />
+                  <CmpSelect
+                    value={formData.mnuAuthType}
+                    onChange={(value) => setFormData({...formData, mnuAuthType: value})}
+                    options={authTypeOptions}
+                  />
                 </div>
 
                 {(isEditMode || isCreateMode) && (
