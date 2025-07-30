@@ -27,9 +27,7 @@ import {
   Menu,
   Plus,
   RefreshCw,
-  Search,
-  Trash2,
-  X
+  Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -39,9 +37,6 @@ export default function MenuManagementPage() {
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [parentMenus, setParentMenus] = useState([]); // 상위 메뉴 목록
-
-  // 검색 상태
-  const [searchKeyword, setSearchKeyword] = useState('');
 
   // 편집 모드 상태
   const [isEditMode, setIsEditMode] = useState(false);
@@ -292,18 +287,6 @@ export default function MenuManagementPage() {
 
     console.log('최종 트리 구조:', rootMenus);
     return rootMenus;
-  };
-
-  // 검색
-  const handleSearch = () => {
-    // 검색 기능은 나중에 구현
-    toast.callCommonToastOpen('검색 기능은 준비 중입니다.');
-  };
-
-  // 검색 조건 초기화
-  const handleResetSearch = () => {
-    setSearchKeyword('');
-    loadMenuTree();
   };
 
   // 트리 노드 확장/축소
@@ -694,48 +677,6 @@ export default function MenuManagementPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">📋 메뉴 관리</h1>
         <p className="text-gray-600">시스템 메뉴를 트리 구조로 관리할 수 있는 페이지입니다.</p>
-      </div>
-
-      {/* 검색 섹션 */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">🔍 메뉴 검색</h2>
-        <div className="flex gap-4 items-end">
-          <div className="flex-1">
-            <label htmlFor="searchKeyword" className="block text-sm font-medium text-gray-700 mb-1">
-              검색어
-            </label>
-            <CmpInput
-              id="searchKeyword"
-              placeholder="메뉴명 또는 설명을 입력하세요"
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSearch();
-                }
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 flex items-center gap-2"
-            >
-              <Search className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              {loading ? '검색 중...' : '검색'}
-            </button>
-            <button
-              onClick={handleResetSearch}
-              disabled={loading}
-              className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50 flex items-center gap-2"
-            >
-              <X className="w-4 h-4" />
-              초기화
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* 메인 컨텐츠 영역 */}

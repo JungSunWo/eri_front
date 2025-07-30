@@ -1,7 +1,7 @@
 'use client';
 
-import { displayToast } from '@/common/com_util';
 import { usePageMoveStore } from '@/common/store/pageMoveStore';
+import { toast } from '@/common/ui_com';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { CmpButton, CmpInput, CmpSelect } from '@/components/ui';
 import { surveyAPI } from '@/lib/api';
@@ -97,11 +97,11 @@ export default function HealthCheckManagementPage() {
         setSurveys(Array.isArray(surveyData) ? surveyData : []);
       } else {
         console.error('설문조사 목록 조회 실패:', response.message);
-        displayToast('설문조사 목록을 불러오는데 실패했습니다.', 'error');
+        toast.callCommonToastOpen('설문조사 목록을 불러오는데 실패했습니다.');
       }
     } catch (error) {
       console.error('설문조사 목록 조회 오류:', error);
-      displayToast('설문조사 목록을 불러오는데 실패했습니다.', 'error');
+      toast.callCommonToastOpen('설문조사 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -116,14 +116,14 @@ export default function HealthCheckManagementPage() {
     try {
       const response = await surveyAPI.deleteSurvey(surveySeq);
       if (response.success) {
-        displayToast('설문조사가 삭제되었습니다.', 'success');
+        toast.callCommonToastOpen('설문조사가 삭제되었습니다.');
         loadSurveys();
       } else {
-        displayToast('설문조사 삭제에 실패했습니다.', 'error');
+        toast.callCommonToastOpen('설문조사 삭제에 실패했습니다.');
       }
     } catch (error) {
       console.error('설문조사 삭제 오류:', error);
-      displayToast('설문조사 삭제에 실패했습니다.', 'error');
+      toast.callCommonToastOpen('설문조사 삭제에 실패했습니다.');
     }
   };
 
@@ -135,11 +135,11 @@ export default function HealthCheckManagementPage() {
         setSurveyResults(response.data);
         setShowResultModal(true);
       } else {
-        displayToast('설문조사 결과를 불러오는데 실패했습니다.', 'error');
+        toast.callCommonToastOpen('설문조사 결과를 불러오는데 실패했습니다.');
       }
     } catch (error) {
       console.error('설문조사 결과 조회 오류:', error);
-      displayToast('설문조사 결과를 불러오는데 실패했습니다.', 'error');
+      toast.callCommonToastOpen('설문조사 결과를 불러오는데 실패했습니다.');
     }
   };
 

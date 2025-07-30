@@ -36,7 +36,7 @@ const CmpNoData = (props) => {
             ) : (
                 <div className="errcmMsg">
                     <div className="errcmCon">
-                        <Image src={`${process.env.NEXT_PUBLIC_PT_URL}image/contents/${img || "img_notCertificate.svg"}`} alt="" width={120} height={120} className="svgIcon" priority={true} />
+                        <Image src={`${process.env.NEXT_PUBLIC_PT_URL}image/contents/${img || "img_noData.svg"}`} alt="" width={120} height={120} className="svgIcon" priority={true} />
                         <p className="t18G">{FormattedLabel(msg)}</p>
                         {subMsg !== undefined ? (
                             <span className='errcmMsg_subMsg'>{subMsg}</span>

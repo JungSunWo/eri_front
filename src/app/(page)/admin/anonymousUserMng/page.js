@@ -1,6 +1,6 @@
 'use client';
 
-import { alert } from '@/common/com_util';
+import { alert } from '@/common/ui_com';
 import PageWrapper from '@/components/layout/PageWrapper';
 import CmpButton from '@/components/ui/CmpButton';
 import CmpInput from '@/components/ui/CmpInput';

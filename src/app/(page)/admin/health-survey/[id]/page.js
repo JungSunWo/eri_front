@@ -1,7 +1,7 @@
 'use client';
 
-import { displayToast } from '@/common/com_util';
 import { usePageMoveStore } from '@/common/store/pageMoveStore';
+import { toast } from '@/common/ui_com';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { CmpButton } from '@/components/ui';
 import { surveyAPI } from '@/lib/api';
@@ -44,12 +44,12 @@ export default function SurveyDetailPage() {
         console.log('설문조사 데이터 설정 완료:', response.data);
       } else {
         console.error('설문조사 상세 조회 실패:', response.message);
-        displayToast('설문조사 정보를 불러오는데 실패했습니다.', 'error');
+        toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
         setMoveTo('/admin/health-survey');
       }
     } catch (error) {
       console.error('설문조사 상세 조회 오류:', error);
-      displayToast('설문조사 정보를 불러오는데 실패했습니다.', 'error');
+      toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
       setMoveTo('/admin/health-survey');
     } finally {
       setLoading(false);

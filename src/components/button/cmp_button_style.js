@@ -12,35 +12,66 @@ const pastelGray = '#f3f4f6'; // 연그레이
 // styleType별 색상 스타일 추가
 export const primary = css`
   background-color: #2563eb;
-  .base { color: #fff; }
+  .base { color: #fff !important; }
 `;
 export const secondary = css`
   background-color: #6b7280;
-  .base { color: #fff; }
+  .base { color: #fff !important; }
 `;
 export const success = css`
   background-color: #22c55e;
-  .base { color: #fff; }
+  .base { color: #fff !important; }
 `;
 export const info = css`
   background-color: #0ea5e9;
-  .base { color: #fff; }
+  .base { color: #fff !important; }
 `;
 export const warning = css`
   background-color: #facc15;
-  .base { color: #78350f; }
+  .base { color: #78350f !important; }
 `;
 export const danger = css`
   background-color: #ef4444;
-  .base { color: #fff; }
+  .base { color: #fff !important; }
 `;
 
 //버튼 공통베이스 스타일
 export const ButtonBaseStyles = css`
-    display:inline-flex;min-height:5.2rem;background-color:${pastelPurple};border-radius:0.6rem;padding:0.3rem 1.2rem 0 1.2rem;text-align:center;justify-content:unset;flex-direction:unset;align-items:unset;transition:background-color 0.3s;font-size:0;vertical-align:middle;
-    .base{display:inline-block;width:100%;font-size:1.6rem;line-height:2.4rem;font-weight:700;color:#5b21b6;letter-spacing:-0.1px;}
-    &:disabled, &[disabled] {background-color: ${pastelGray};}
-    &:disabled .base, &[disabled] .base {color: #a1a1aa}
+    display: inline-flex;
+    min-height: 5.2rem;
+    background-color: ${pastelPurple};
+    border-radius: 0.6rem;
+    padding: 0.3rem 1.2rem;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.3s;
+    font-size: 0;
+    vertical-align: middle;
+    border: none;
+    cursor: pointer;
+
+    .base{
+        display: inline-block;
+        width: 100%;
+        font-size: 1.6rem;
+        line-height: 2.4rem;
+        font-weight: 700;
+        color: #374151;
+        letter-spacing: -0.1px;
+    }
+
+    &:disabled, &[disabled] {
+        background-color: ${pastelGray};
+        cursor: not-allowed;
+    }
+    &:disabled .base, &[disabled] .base {
+        color: #a1a1aa;
+    }
+
+    &:hover:not(:disabled) {
+        opacity: 0.8;
+    }
 `;
 
 //그레이 테마
@@ -61,10 +92,37 @@ export const lightblue = css`
 
 //라인버튼
 export const line = css`
-    display: inline-block;width:auto;background-color:${pastelGray};border:1px solid #c7d2fe;
-    .base{color:#6b7280}
-    &:disabled, &[disabled] {background-color: ${pastelGray};border-color:#e5e7eb;}
-    &:disabled .base, &[disabled] .base {color:#a1a1aa !important;}
+    display: inline-flex;
+    width: auto;
+    background-color: ${pastelGray};
+    border: 1px solid #c7d2fe;
+    border-radius: 0.6rem;
+    padding: 0.3rem 1.2rem;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s;
+
+    .base{
+        color: #6b7280;
+        font-size: 1.6rem;
+        line-height: 2.4rem;
+        font-weight: 700;
+    }
+
+    &:disabled, &[disabled] {
+        background-color: ${pastelGray};
+        border-color: #e5e7eb;
+        cursor: not-allowed;
+    }
+    &:disabled .base, &[disabled] .base {
+        color: #a1a1aa !important;
+    }
+
+    &:hover:not(:disabled) {
+        background-color: #f8fafc;
+        border-color: #a5b4fc;
+    }
 `;
 
 //라인블루
@@ -133,16 +191,43 @@ export const h32 = css`
 
 //높이 40
 export const h40 = css`
-    min-height: 3rem;
+    min-height: 4rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    .base{font-size:1.2rem;line-height:1.8rem;display:inline-block;width:auto;text-align:center;vertical-align:middle;}
+    padding: 0.3rem 1.2rem;
+    border-radius: 0.4rem;
+    .base{
+        font-size: 1.4rem;
+        line-height: 2rem;
+        display: inline-block;
+        width: auto;
+        text-align: center;
+        vertical-align: middle;
+    }
 `;
 
 //높이 76
 export const h76 = css`
     min-height:7.6rem;width:auto;display:inline-block;
+`;
+
+//작은 크기 (sm)
+export const sm = css`
+    min-height: 2.4rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.8rem;
+    border-radius: 0.3rem;
+    .base{
+        font-size: 1.2rem;
+        line-height: 1.6rem;
+        display: inline-block;
+        width: auto;
+        text-align: center;
+        vertical-align: middle;
+    }
 `;
 
 //============================================================================================================
@@ -178,6 +263,7 @@ export const StyleCommonButton = css`
     ${props => props['data-size'] === 'h32' && h32};
     ${props => props['data-size'] === 'h76' && h76};
     ${props => props['data-size'] === 'h40' && h40};
+    ${props => props['data-size'] === 'sm' && sm};
 
     /* 가로 스타일 */
     ${props => props['data-width'] !== undefined && `

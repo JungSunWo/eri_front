@@ -1,7 +1,7 @@
 'use client';
 
-import { displayToast } from '@/common/com_util';
 import { usePageMoveStore } from '@/common/store/pageMoveStore';
+import { toast } from '@/common/ui_com';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { CmpButton, CmpInput, CmpSelect, CmpTextarea } from '@/components/ui';
 import { surveyAPI } from '@/lib/api';
@@ -73,12 +73,12 @@ export default function CreateSurveyPage() {
   // 설문조사 생성
   const createSurvey = async () => {
     if (!surveyForm.surveyTtl.trim()) {
-      displayToast('설문 제목을 입력해주세요.', 'error');
+      toast.callCommonToastOpen('설문 제목을 입력해주세요.');
       return;
     }
 
     if (questions.length === 0) {
-      displayToast('최소 1개 이상의 질문을 추가해주세요.', 'error');
+      toast.callCommonToastOpen('최소 1개 이상의 질문을 추가해주세요.');
       return;
     }
 
@@ -97,28 +97,28 @@ export default function CreateSurveyPage() {
       const response = await surveyAPI.createSurvey(surveyData);
 
       if (response.success) {
-        displayToast('설문조사가 생성되었습니다.', 'success');
+        toast.callCommonToastOpen('설문조사가 생성되었습니다.');
         setMoveTo('/admin/health-survey');
       } else {
-        displayToast(response.message || '설문조사 생성에 실패했습니다.', 'error');
+        toast.callCommonToastOpen(response.message || '설문조사 생성에 실패했습니다.');
       }
     } catch (error) {
       console.error('설문조사 생성 오류:', error);
-      displayToast('설문조사 생성에 실패했습니다.', 'error');
+      toast.callCommonToastOpen('설문조사 생성에 실패했습니다.');
     }
   };
 
   // 질문 추가
   const addQuestion = () => {
     if (!currentQuestion.questionTtl.trim()) {
-      displayToast('질문 제목을 입력해주세요.', 'error');
+      toast.callCommonToastOpen('질문 제목을 입력해주세요.');
       return;
     }
 
     // 선택지 검증
     const emptyChoices = currentQuestion.choices.filter(choice => !choice.choiceTtl.trim());
     if (emptyChoices.length > 0) {
-      displayToast('모든 선택지를 입력해주세요.', 'error');
+      toast.callCommonToastOpen('모든 선택지를 입력해주세요.');
       return;
     }
 

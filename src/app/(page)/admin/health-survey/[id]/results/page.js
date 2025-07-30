@@ -1,7 +1,7 @@
 'use client';
 
-import { displayToast } from '@/common/com_util';
 import { usePageMoveStore } from '@/common/store/pageMoveStore';
+import { toast } from '@/common/ui_com';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { CmpButton } from '@/components/ui';
 import { surveyAPI } from '@/lib/api';
@@ -39,12 +39,12 @@ export default function SurveyResultsPage() {
       if (response.success) {
         setSurvey(response.data);
       } else {
-        displayToast('설문조사 정보를 불러오는데 실패했습니다.', 'error');
+        toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
         setMoveTo('/admin/health-survey');
       }
     } catch (error) {
       console.error('설문조사 상세 조회 오류:', error);
-      displayToast('설문조사 정보를 불러오는데 실패했습니다.', 'error');
+      toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
       setMoveTo('/admin/health-survey');
     } finally {
       setLoading(false);
@@ -65,11 +65,11 @@ export default function SurveyResultsPage() {
           questionStats: []
         });
       } else {
-        displayToast('설문조사 결과를 불러오는데 실패했습니다.', 'error');
+        toast.callCommonToastOpen('설문조사 결과를 불러오는데 실패했습니다.');
       }
     } catch (error) {
       console.error('설문조사 결과 조회 오류:', error);
-      displayToast('설문조사 결과를 불러오는데 실패했습니다.', 'error');
+      toast.callCommonToastOpen('설문조사 결과를 불러오는데 실패했습니다.');
     }
   };
 
@@ -81,7 +81,7 @@ export default function SurveyResultsPage() {
   // 결과 내보내기
   const exportResults = () => {
     // TODO: 결과 내보내기 기능 구현
-    displayToast('결과 내보내기 기능은 준비 중입니다.', 'info');
+    toast.callCommonToastOpen('결과 내보내기 기능은 준비 중입니다.');
   };
 
   // 날짜 포맷팅

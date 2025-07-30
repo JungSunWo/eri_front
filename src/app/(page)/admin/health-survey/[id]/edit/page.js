@@ -1,17 +1,17 @@
 'use client';
 
-import { displayToast } from '@/common/com_util';
 import { usePageMoveStore } from '@/common/store/pageMoveStore';
+import { toast } from '@/common/ui_com';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { CmpButton, CmpInput, CmpSelect, CmpTextarea } from '@/components/ui';
 import { surveyAPI } from '@/lib/api';
 import {
-    ArrowLeft,
-    Edit,
-    Plus,
-    Save,
-    Trash2,
-    X
+  ArrowLeft,
+  Edit,
+  Plus,
+  Save,
+  Trash2,
+  X
 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -106,12 +106,12 @@ export default function EditSurveyPage() {
         // 질문 데이터 설정
         setQuestions(survey.questions || []);
       } else {
-        displayToast('설문조사 정보를 불러오는데 실패했습니다.', 'error');
+        toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
         setMoveTo('/admin/health-survey');
       }
     } catch (error) {
       console.error('설문조사 상세 조회 오류:', error);
-      displayToast('설문조사 정보를 불러오는데 실패했습니다.', 'error');
+      toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
       setMoveTo('/admin/health-survey');
     } finally {
       setLoading(false);
@@ -121,32 +121,26 @@ export default function EditSurveyPage() {
   // 설문조사 수정
   const updateSurvey = async () => {
     if (!surveyForm.surveyTtl.trim()) {
-      displayToast('설문 제목을 입력해주세요.', 'error');
+      toast.callCommonToastOpen('설문 제목을 입력해주세요.');
       return;
     }
 
     setSaving(true);
     try {
-      const surveyData = {
+      const response = await surveyAPI.updateSurvey(surveySeq, {
         ...surveyForm,
-        surveyStsCd: surveyForm.surveyStsCd || 'DRAFT',
-        anonymousYn: surveyForm.anonymousYn || 'N',
-        duplicateYn: surveyForm.duplicateYn || 'N',
-        targetEmpTyCd: surveyForm.targetEmpTyCd || 'ALL',
         questions: questions
-      };
-
-      const response = await surveyAPI.updateSurvey(surveySeq, surveyData);
+      });
 
       if (response.success) {
-        displayToast('설문조사가 수정되었습니다.', 'success');
+        toast.callCommonToastOpen('설문조사가 수정되었습니다.');
         setMoveTo(`/admin/health-survey/${surveySeq}`);
       } else {
-        displayToast(response.message || '설문조사 수정에 실패했습니다.', 'error');
+        toast.callCommonToastOpen(response.message || '설문조사 수정에 실패했습니다.');
       }
     } catch (error) {
       console.error('설문조사 수정 오류:', error);
-      displayToast('설문조사 수정에 실패했습니다.', 'error');
+      toast.callCommonToastOpen('설문조사 수정에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -155,37 +149,25 @@ export default function EditSurveyPage() {
   // 질문 추가
   const addQuestion = () => {
     if (!currentQuestion.questionTtl.trim()) {
-      displayToast('질문 제목을 입력해주세요.', 'error');
+      toast.callCommonToastOpen('질문 제목을 입력해주세요.');
       return;
     }
 
-    // 선택지 검증
-    const emptyChoices = currentQuestion.choices.filter(choice => !choice.choiceTtl.trim());
-    if (emptyChoices.length > 0) {
-      displayToast('모든 선택지를 입력해주세요.', 'error');
-      return;
+    if (currentQuestion.questionTyCd === 'MULTIPLE_CHOICE') {
+      const emptyChoices = currentQuestion.choices.filter(choice => !choice.choiceTtl.trim());
+      if (emptyChoices.length > 0) {
+        toast.callCommonToastOpen('모든 선택지를 입력해주세요.');
+        return;
+      }
     }
 
-    const newQuestion = {
-      ...currentQuestion,
-      questionOrd: questions.length + 1
-    };
-
-    setQuestions([...questions, newQuestion]);
-
-    // 다음 질문을 위한 초기화
+    setQuestions([...questions, { ...currentQuestion, questionSeq: Date.now() }]);
     setCurrentQuestion({
       questionTtl: '',
-      questionDesc: '',
       questionTyCd: 'SINGLE_CHOICE',
-      questionOrd: questions.length + 2,
-      requiredYn: 'Y',
       choices: [
-        { choiceTtl: '', choiceOrd: 1, choiceScore: 10 },
-        { choiceTtl: '', choiceOrd: 2, choiceScore: 10 },
-        { choiceTtl: '', choiceOrd: 3, choiceScore: 10 },
-        { choiceTtl: '', choiceOrd: 4, choiceScore: 10 },
-        { choiceTtl: '', choiceOrd: 5, choiceScore: 10 }
+        { choiceTtl: '', choiceSeq: 1 },
+        { choiceTtl: '', choiceSeq: 2 }
       ]
     });
   };
@@ -241,17 +223,14 @@ export default function EditSurveyPage() {
   // 질문 수정 저장
   const saveEditQuestion = () => {
     if (currentQuestion.questionTtl.trim() === '') {
-      displayToast('질문 제목을 입력해주세요.', 'error');
+      toast.callCommonToastOpen('질문 제목을 입력해주세요.');
       return;
     }
 
-    const updatedQuestions = [...questions];
-    updatedQuestions[editingQuestionIndex] = {
-      ...currentQuestion,
-      questionOrd: editingQuestionIndex + 1
-    };
+    const updatedQuestions = questions.map(q =>
+      q.questionSeq === currentQuestion.questionSeq ? currentQuestion : q
+    );
     setQuestions(updatedQuestions);
-
     setIsEditingQuestion(false);
     setEditingQuestionIndex(null);
 
@@ -271,7 +250,7 @@ export default function EditSurveyPage() {
       ]
     });
 
-    displayToast('질문이 수정되었습니다.', 'success');
+    toast.callCommonToastOpen('질문이 수정되었습니다.');
   };
 
   // 선택지 업데이트

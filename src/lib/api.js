@@ -43,5 +43,8 @@ export {
     createAdmin, deleteAdmin, getAdminList, getEmployeeDetail, getEmployeeList, updateAdmin
 } from './api/adminAPI';
 
+// 시스템 로그 관련 API
+export { systemLogAPI } from './api/systemLogAPI';
+
 // 기본 export (기존 코드 호환성)
 export { api as default } from './api/apiClient';
