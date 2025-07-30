@@ -1,6 +1,7 @@
 'use client';
 
 
+import { setMoveTo } from '@/common/store/pageMoveStore';
 import { alert } from '@/common/ui_com';
 import Board from '@/components/Board';
 import ConsultationButton from '@/components/ConsultationButton';
@@ -273,8 +274,18 @@ const ConsultationPage = () => {
             <div className="p-6">
                 {/* 헤더 */}
                 <div className="mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">상담신청</h1>
-                    <p className="text-gray-600">상담을 신청하고 답변을 확인할 수 있습니다.</p>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900 mb-2">상담신청</h1>
+                            <p className="text-gray-600">상담을 신청하고 답변을 확인할 수 있습니다.</p>
+                        </div>
+                        <CmpButton
+                            onClick={() => setMoveTo('/consultation/selection')}
+                            styleType="primary"
+                        >
+                            새로운 상담 신청
+                        </CmpButton>
+                    </div>
                 </div>
 
                 {/* 검색 영역 */}

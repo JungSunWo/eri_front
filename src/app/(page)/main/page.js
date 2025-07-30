@@ -55,7 +55,7 @@ export default function MainPage() {
    */
   const handleConsultation = () => {
     console.log('Consultation');
-    setMoveTo('/consultation');
+    setMoveTo('/consultation/selection');
   };
 
   /**
