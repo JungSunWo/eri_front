@@ -1,6 +1,6 @@
 "use client";
 
-import PageWrapper from '@/components/layout/PageWrapper';
+import PageWrapper from '@/app/shared/layouts/PageWrapper';
 import { useEffect } from 'react';
 import "./globals.css";
 

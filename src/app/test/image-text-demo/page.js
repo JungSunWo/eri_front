@@ -1,6 +1,6 @@
 'use client';
 
-import ImageTextModal from '@/components/ImageTextModal';
+import ImageTextModal from '@/app/shared/components/ImageTextModal';
 import { Download, Eye, Link, Upload } from 'lucide-react';
 import { useState } from 'react';
 

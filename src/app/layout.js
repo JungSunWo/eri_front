@@ -7,9 +7,9 @@
  * @History        : 20250701  최초 신규
  **/
 
+import ConsultationPopupProvider from "@/app/shared/components/ConsultationPopupProvider";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import ConsultationPopupProvider from "@/components/ConsultationPopupProvider";
 
 // Inter 폰트 설정 - Google Fonts에서 가져온 웹 폰트
 const inter = Inter({ subsets: ["latin"] });

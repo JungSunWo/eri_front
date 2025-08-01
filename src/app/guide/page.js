@@ -1,19 +1,19 @@
 "use client";
 
-import storage from '@/common/storage';
-import { useLnbMenuStore } from '@/common/store/lnbMenuStore';
-import { useMenuStore } from '@/common/store/menuStore';
-import { usePageMoveStore } from '@/common/store/pageMoveStore';
-import { FullPopup, alert, bottomSheet, toast } from '@/common/ui_com';
-import Board from '@/components/Board';
-import { CalendarSet, CmpBsArea } from '@/components/bottomSheets/cmp_bottomSheets';
-import { CmpBsCalendarArea, CmpBsPeriodCalendarArea, CmpBsWrapAccountCont, CmpBsWrapDefautlCont, CmpBsWrapDescriptionCont, CmpBsWrapLinkCont } from '@/components/bottomSheets/cmp_bottomSheets_wrapper';
-import { EChartsBarChart, EChartsLineChart, EChartsPieChart, EChartsScatterChart } from '@/components/charts';
-import { CmpFpArea, CmpFpCont, CmpFpTitle } from '@/components/fullPopup/cmp_fullPopup';
-import PageWrapper from '@/components/layout/PageWrapper';
-import * as UI from '@/components/ui';
-import CmpSelect from '@/components/ui/CmpSelect';
-import { authAPI, menuAPI, noticeAPI } from '@/lib/api';
+import { authAPI, menuAPI, noticeAPI } from '@/app/core/services/api';
+import { useLnbMenuStore } from '@/app/core/slices/lnbMenuStore';
+import { useMenuStore } from '@/app/core/slices/menuStore';
+import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
+import Board from '@/app/shared/components/Board';
+import { CalendarSet, CmpBsArea } from '@/app/shared/components/bottomSheets/cmp_bottomSheets';
+import { CmpBsCalendarArea, CmpBsPeriodCalendarArea, CmpBsWrapAccountCont, CmpBsWrapDefautlCont, CmpBsWrapDescriptionCont, CmpBsWrapLinkCont } from '@/app/shared/components/bottomSheets/cmp_bottomSheets_wrapper';
+import { EChartsBarChart, EChartsLineChart, EChartsPieChart, EChartsScatterChart } from '@/app/shared/components/charts';
+import { CmpFpArea, CmpFpCont, CmpFpTitle } from '@/app/shared/components/fullPopup/cmp_fullPopup';
+import * as UI from '@/app/shared/components/ui';
+import CmpSelect from '@/app/shared/components/ui/CmpSelect';
+import PageWrapper from '@/app/shared/layouts/PageWrapper';
+import storage from '@/app/shared/utils/storage';
+import { FullPopup, alert, bottomSheet, toast } from '@/app/shared/utils/ui_com';
 import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
 import { BarChart3, Bell, ChevronDown, ClipboardList, Cloud, Code, Database, Info, Layers, List, Settings, Square, Table } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -815,7 +815,7 @@ export default function GuidePage() {
             <div>
               <h3 className="text-lg font-medium mb-2">Input/Password</h3>
               <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-                <pre>{`import { CmpInput } from '@/components/ui';
+                <pre>{`import { CmpInput } from '@/app/shared/components/ui';
 import { useState } from 'react';
 
 const [value, setValue] = useState('');
@@ -830,7 +830,7 @@ const [pw, setPw] = useState('');
             <div>
               <h3 className="text-lg font-medium mb-2">Checkbox</h3>
               <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-                <pre>{`import { CmpCheckbox } from '@/components/ui';
+                <pre>{`import { CmpCheckbox } from '@/app/shared/components/ui';
 import { useState } from 'react';
 
 const [checked, setChecked] = useState(false);
@@ -841,7 +841,7 @@ const [checked, setChecked] = useState(false);
             <div>
               <h3 className="text-lg font-medium mb-2">Radio/RadioGroup</h3>
               <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-                <pre>{`import { CmpRadio, CmpRadioGroup } from '@/components/ui';
+                <pre>{`import { CmpRadio, CmpRadioGroup } from '@/app/shared/components/ui';
 import { useState } from 'react';
 
 const [gender, setGender] = useState('male');
@@ -863,7 +863,7 @@ const [gender, setGender] = useState('male');
             <div>
               <h3 className="text-lg font-medium mb-2">Select</h3>
               <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-                <pre>{`import { CmpSelect } from '@/components/ui';
+                <pre>{`import { CmpSelect } from '@/app/shared/components/ui';
 import { useState } from 'react';
 
 const [selected, setSelected] = useState('');
@@ -883,7 +883,7 @@ const [selected, setSelected] = useState('');
             <div>
               <h3 className="text-lg font-medium mb-2">Textarea</h3>
               <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-                <pre>{`import { CmpTextarea } from '@/components/ui';
+                <pre>{`import { CmpTextarea } from '@/app/shared/components/ui';
 import { useState } from 'react';
 
 const [text, setText] = useState('');
@@ -894,7 +894,7 @@ const [text, setText] = useState('');
             <div>
               <h3 className="text-lg font-medium mb-2">CommonModal</h3>
               <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-                <pre>{`import { CommonModal } from '@/components/ui';
+                <pre>{`import { CommonModal } from '@/app/shared/components/ui';
 import { useState } from 'react';
 
 const [open, setOpen] = useState(false);
@@ -921,9 +921,9 @@ const [open, setOpen] = useState(false);
             <h3 className="text-lg font-medium mb-2">샘플 소스</h3>
             <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
               <pre>{`import { useEffect, useState } from 'react';
-import { cmnCodeAPI } from '@/lib/api';
-import { CmpSelect } from '@/components/ui';
-import Board from '@/components/Board';
+import { cmnCodeAPI } from '@/app/core/services/api';
+import { CmpSelect } from '@/app/shared/components/ui';
+import Board from '@/app/shared/components/Board';
 
 export default function CmnCodeBoardSample() {
   const [codeOptions, setCodeOptions] = useState([]);
@@ -1072,7 +1072,7 @@ export default function CmnCodeBoardSample() {
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <h3 className="text-lg font-medium mb-2">토스트 사용법</h3>
             <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-              <pre>{`import { toast } from '@/common/ui_com';
+                              <pre>{`import { toast } from '@/app/shared/utils/ui_com';
 
 // 기본 토스트 (3초 후 자동 사라짐)
 toast.callCommonToastOpen('메시지입니다.');
@@ -1137,8 +1137,8 @@ toast.callCommonToastOpen('취소와 확인 버튼이 있는 토스트입니다.
               <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
                 <pre>{`"use client";
 
-import { usePageMoveStore } from '@/common/store/pageMoveStore';
-import { useMenuStore } from '@/common/store/menuStore';
+import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
+import { useMenuStore } from '@/app/core/slices/menuStore';
 
 export default function MyPage() {
   const setMoveTo = usePageMoveStore((state) => state.setMoveTo);
@@ -1157,7 +1157,7 @@ export default function MyPage() {
             <div>
               <h3 className="text-lg font-medium mb-2">알림 사용법</h3>
               <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-                <pre>{`import { alert } from '@/common/ui_com';
+                <pre>{`import { alert } from '@/app/shared/utils/ui_com';
 
 // 일반 알림
 alert.AlertOpen('제목', '내용');
@@ -1183,7 +1183,7 @@ alert.ErrorAlert('오류 제목', [{
             <div>
               <h3 className="text-lg font-medium mb-2">토스트 사용법</h3>
               <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-                <pre>{`import { toast } from '@/common/ui_com';
+                <pre>{`import { toast } from '@/app/shared/utils/ui_com';
 
 // 기본 토스트 (3초 후 자동 사라짐)
 toast.callCommonToastOpen('메시지입니다.');
@@ -1216,7 +1216,7 @@ toast.callCommonToastOpen('취소와 확인 버튼이 있는 토스트입니다.
             <div>
               <h3 className="text-lg font-medium mb-2">스토리지 사용법</h3>
               <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-                <pre>{`import storage from '@/common/storage';
+                <pre>{`import storage from '@/app/shared/utils/storage';
 
 // 스토리지 인스턴스 생성
 const storageInstance = storage();
@@ -1243,8 +1243,8 @@ const tempData = storageInstance.getEItem('tempData');`}</pre>
             <div>
               <h3 className="text-lg font-medium mb-2">API 호출 예시</h3>
               <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-                <pre>{`import { authAPI, menuAPI, cmnCodeAPI } from '@/lib/api';
-import { alert } from '@/common/ui_com';
+                <pre>{`import { authAPI, menuAPI, cmnCodeAPI } from '@/app/core/services/api';
+import { alert } from '@/app/shared/utils/ui_com';
 
 // 인증 관련 API
 const handleLogin = async (empNo) => {
@@ -1354,7 +1354,7 @@ const isDebug = process.env.NEXT_PUBLIC_DEBUG === 'true';`}</pre>
           <div className="mt-4">
             <h3 className="text-lg font-medium mb-2">코드 예제</h3>
             <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-              <pre>{`import { noticeAPI } from '@/lib/api';
+                              <pre>{`import { noticeAPI } from '@/app/core/services/api';
 
 const detail = await noticeAPI.getNoticeDetail(1);
 console.log(detail); // { ttl, regEmpId, regDate, stsCd, cntn, ... }`}</pre>
@@ -1381,9 +1381,9 @@ console.log(detail); // { ttl, regEmpId, regDate, stsCd, cntn, ... }`}</pre>
           />
           <div className="text-sm text-gray-500 mb-2">행(row) 클릭 시 alert로 데이터 표시</div>
           <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-            <pre>{`import Board from '@/components/Board';
-import { usePageMoveStore } from '@/common/store/pageMoveStore';
-import { alert } from '@/common/ui_com';
+            <pre>{`import Board from '@/app/shared/components/Board';
+import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
+import { alert } from '@/app/shared/utils/ui_com';
 
 // 컬럼 정의
 const columns = [
@@ -1446,8 +1446,8 @@ const renderCell = (row, col) => {
             FullPopup 열기
           </button>
           <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto mt-4">
-            <pre>{`import { FullPopup } from '@/common/ui_com';
-import { CmpFpArea, CmpFpCont, CmpFpTitle } from '@/components/fullPopup/cmp_fullPopup';
+                            <pre>{`import { FullPopup } from '@/app/shared/utils/ui_com';
+import { CmpFpArea, CmpFpCont, CmpFpTitle } from '@/app/shared/components/fullPopup/cmp_fullPopup';
 
 // FullPopup 열기
 const handleOpen = () => {
@@ -1525,7 +1525,7 @@ const handleClose = () => {
           </div>
 
           <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-            <pre>{`import { bottomSheet } from '@/common/ui_com';
+                            <pre>{`import { bottomSheet } from '@/app/shared/utils/ui_com';
 import {
   CmpBsWrapDefautlCont,
   CmpBsWrapDescriptionCont,
@@ -1533,8 +1533,8 @@ import {
   CmpBsWrapAccountCont,
   CmpBsCalendarArea,
   CmpBsPeriodCalendarArea
-} from '@/components/bottomSheets/cmp_bottomSheets_wrapper';
-import { Calendar, CalendarSet, CmpBsArea } from '@/components/bottomSheets/cmp_bottomSheets';
+} from '@/app/shared/components/bottomSheets/cmp_bottomSheets_wrapper';
+import { Calendar, CalendarSet, CmpBsArea } from '@/app/shared/components/bottomSheets/cmp_bottomSheets';
 
 // 1. 기본 BottomSheet
 const defaultData = [
@@ -1688,7 +1688,7 @@ const handleOptionClick = (data) => {
           </div>
 
           <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-            <pre>{`import CmpSelect from '@/components/ui/CmpSelect';
+                            <pre>{`import CmpSelect from '@/app/shared/components/ui/CmpSelect';
 
 // 기본 사용법
 const [selectedValue, setSelectedValue] = useState('');
@@ -1815,7 +1815,7 @@ const [selectedValue, setSelectedValue] = useState('');
           </div>
 
           <div className="bg-gray-900 text-green-400 rounded p-4 text-sm overflow-x-auto">
-            <pre>{`import { EChartsLineChart, EChartsBarChart, EChartsPieChart, EChartsScatterChart } from '@/components/charts';
+                            <pre>{`import { EChartsLineChart, EChartsBarChart, EChartsPieChart, EChartsScatterChart } from '@/app/shared/components/charts';
 
 // 라인 차트
 const lineData = {

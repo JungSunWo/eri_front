@@ -1,8 +1,8 @@
 'use client';
 
-import { alert } from '@/common/ui_com.js';
-import PageWrapper from '@/components/layout/PageWrapper';
-import { imgBrdAPI } from '@/lib/api/imgBrdAPI';
+import { imgBrdAPI } from '@/app/core/services/api/imgBrdAPI';
+import PageWrapper from '@/app/shared/layouts/PageWrapper';
+import { alert } from '@/app/shared/utils/ui_com.js';
 import { useEffect, useState } from 'react';
 
 export default function ImgSelectionPage() {
@@ -219,11 +219,10 @@ export default function ImgSelectionPage() {
                             {randomImages.map((img) => (
                                 <div
                                     key={img.imgFileSeq}
-                                    className={`border rounded-lg p-3 cursor-pointer transition-colors ${
-                                        isImageSelected(img.imgFileSeq)
+                                    className={`border rounded-lg p-3 cursor-pointer transition-colors ${isImageSelected(img.imgFileSeq)
                                             ? 'border-blue-500 bg-blue-50'
                                             : 'border-gray-200 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                     onClick={() => handleToggleImageSelection(img.imgFileSeq)}
                                 >
                                     <div className="aspect-square bg-gray-100 rounded-lg mb-2 flex items-center justify-center">
@@ -253,11 +252,10 @@ export default function ImgSelectionPage() {
                                             />
                                         </div>
                                         <div className="mt-2 text-center">
-                                            <span className={`inline-block px-2 py-1 text-xs rounded ${
-                                                isImageSelected(img.imgFileSeq)
+                                            <span className={`inline-block px-2 py-1 text-xs rounded ${isImageSelected(img.imgFileSeq)
                                                     ? 'bg-blue-500 text-white'
                                                     : 'bg-gray-200 text-gray-600'
-                                            }`}>
+                                                }`}>
                                                 {isImageSelected(img.imgFileSeq) ? '선택됨' : '선택 안됨'}
                                             </span>
                                         </div>

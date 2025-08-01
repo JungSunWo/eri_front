@@ -11,7 +11,7 @@
 
 'use client';
 
-import Calendar from '@/components/Calendar';
+import Calendar from '@/app/shared/components/Calendar';
 import { useState } from 'react';
 
 /**

@@ -12,8 +12,8 @@
 
 'use client';
 
-import { toast } from '@/common/ui_com';
-import { CmpBadge, CmpInput, CmpSelect, CmpTextarea, CommonModal } from '@/components/ui';
+import { CmpBadge, CmpInput, CmpSelect, CmpTextarea, CommonModal } from '@/app/shared/components/ui';
+import { toast } from '@/app/shared/utils/ui_com';
 import {
   BookOpen,
   Database,
@@ -117,7 +117,7 @@ ERI/
 
 ### CmpInput (입력 필드)
 \`\`\`jsx
-import { CmpInput } from '@/components/ui';
+import { CmpInput } from '@/app/shared/components/ui';
 
 <CmpInput
   placeholder="입력하세요"
@@ -129,7 +129,7 @@ import { CmpInput } from '@/components/ui';
 
 ### CmpSelect (선택 박스)
 \`\`\`jsx
-import { CmpSelect } from '@/components/ui';
+import { CmpSelect } from '@/app/shared/components/ui';
 
 <CmpSelect
   value={selectedValue}
@@ -144,7 +144,7 @@ import { CmpSelect } from '@/components/ui';
 
 ### CmpBadge (뱃지)
 \`\`\`jsx
-import { CmpBadge } from '@/components/ui';
+import { CmpBadge } from '@/app/shared/components/ui';
 
 <CmpBadge variant="default">기본</CmpBadge>
 <CmpBadge variant="secondary">보조</CmpBadge>
@@ -176,7 +176,7 @@ export const API_TIMEOUT = 30000;
 \`\`\`javascript
 // src/lib/api.js
 import axios from 'axios';
-import { API_BASE_URL, API_TIMEOUT } from '@/common/env.config';
+import { API_BASE_URL, API_TIMEOUT } from '@/app/shared/config/env.config';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
