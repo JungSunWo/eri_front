@@ -102,102 +102,506 @@ export const consultationAPI = {
     return response.data;
   },
 
+  // =====================================================
+  // 게시판 파일 첨부 관련 API
+  // =====================================================
+
   /**
-   * 상담 파일 다운로드
-   * @param {string|number} fileSeq - 파일 시퀀스
-   * @returns {Promise<Blob>} 다운로드 파일
+   * 게시판 파일 첨부 목록 조회 (페이징/검색)
+   * @param {Object} params - 조회 파라미터 (page, size, searchType, searchKeyword, brdSeq, sortBy, sortDirection)
+   * @returns {Promise<Object>} 파일 첨부 목록 (페이징 정보 포함)
    */
-  downloadFile: async (fileSeq) => {
-    const response = await api.get(`/api/file/download/${fileSeq}`, {
+  getBoardFileAttachList: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const response = await api.get(`/api/board-file-attach/list${query ? `?${query}` : ''}`);
+    return response.data;
+  },
+
+  /**
+   * 게시판 파일 첨부 상세 조회
+   * @param {string|number} fileSeq - 파일 시퀀스
+   * @returns {Promise<Object>} 파일 첨부 상세 정보
+   */
+  getBoardFileAttachDetail: async (fileSeq) => {
+    const response = await api.get(`/api/board-file-attach/${fileSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 게시글별 파일 첨부 목록 조회
+   * @param {string|number} brdSeq - 게시글 시퀀스
+   * @returns {Promise<Array>} 파일 첨부 목록
+   */
+  getBoardFileAttachByBrdSeq: async (brdSeq) => {
+    const response = await api.get(`/api/board-file-attach/board/${brdSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 게시판 파일 업로드
+   * @param {FormData} formData - 파일 데이터 (file, brdSeq, regId)
+   * @returns {Promise<Object>} 업로드된 파일 정보
+   */
+  uploadBoardFile: async (formData) => {
+    const response = await api.post('/api/board-file-attach/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  /**
+   * 게시판 파일 다운로드
+   * @param {string|number} fileSeq - 파일 시퀀스
+   * @returns {Promise<Blob>} 파일 데이터
+   */
+  downloadBoardFile: async (fileSeq) => {
+    const response = await api.get(`/api/board-file-attach/download/${fileSeq}`, {
       responseType: 'blob',
     });
     return response.data;
   },
 
   /**
-   * 상담 파일 삭제
+   * 게시판 파일 미리보기 (이미지 파일)
    * @param {string|number} fileSeq - 파일 시퀀스
-   * @returns {Promise<Object>} 파일 삭제 결과
+   * @returns {Promise<Blob>} 이미지 데이터
    */
-  deleteFile: async (fileSeq) => {
-    const response = await api.delete(`/api/file/${fileSeq}`);
+  previewBoardFile: async (fileSeq) => {
+    const response = await api.get(`/api/board-file-attach/preview/${fileSeq}`, {
+      responseType: 'blob',
+    });
     return response.data;
   },
 
   /**
-   * 상담 조회수 증가
-   * @param {string|number} seq - 상담 시퀀스
-   * @returns {Promise<Object>} 조회수 증가 결과
+   * 게시판 파일 첨부 수정
+   * @param {string|number} fileSeq - 파일 시퀀스
+   * @param {Object} data - 수정할 데이터
+   * @returns {Promise<Object>} 수정된 파일 첨부 정보
    */
-  incrementViewCount: async (seq) => {
-    const response = await api.put(`/api/consultation/${seq}/view`);
+  updateBoardFileAttach: async (fileSeq, data) => {
+    const response = await api.put(`/api/board-file-attach/${fileSeq}`, data);
     return response.data;
   },
 
   /**
-   * 상담 상태 변경
-   * @param {string|number} seq - 상담 시퀀스
-   * @param {string} status - 변경할 상태
-   * @returns {Promise<Object>} 상태 변경 결과
+   * 게시판 파일 첨부 삭제
+   * @param {string|number} fileSeq - 파일 시퀀스
+   * @returns {Promise<Object>} 삭제 결과
    */
-  updateStatus: async (seq, status) => {
-    const response = await api.put(`/api/consultation/${seq}/status`, { status });
+  deleteBoardFileAttach: async (fileSeq) => {
+    const response = await api.delete(`/api/board-file-attach/${fileSeq}`);
     return response.data;
   },
 
   /**
-   * 상담 우선순위 변경
-   * @param {string|number} seq - 상담 시퀀스
-   * @param {string} priority - 변경할 우선순위
-   * @returns {Promise<Object>} 우선순위 변경 결과
+   * 게시글별 파일 첨부 삭제
+   * @param {string|number} brdSeq - 게시글 시퀀스
+   * @returns {Promise<Object>} 삭제 결과
    */
-  updatePriority: async (seq, priority) => {
-    const response = await api.put(`/api/consultation/${seq}/priority`, { priority });
+  deleteBoardFileAttachByBrdSeq: async (brdSeq) => {
+    const response = await api.delete(`/api/board-file-attach/board/${brdSeq}`);
     return response.data;
   },
 
   /**
-   * 상담 통계 조회
-   * @param {Object} params - 통계 파라미터 (startDate, endDate, categoryCd 등)
-   * @returns {Promise<Object>} 상담 통계 데이터
+   * 게시판 파일 이미지 링크 정보 업데이트
+   * @param {string|number} fileSeq - 파일 시퀀스
+   * @param {string} imgLinks - 이미지 링크 정보 (JSON 문자열)
+   * @returns {Promise<Object>} 업데이트 결과
    */
-  getStatistics: async (params = {}) => {
+  updateBoardFileImgLinks: async (fileSeq, imgLinks) => {
+    const response = await api.put(`/api/board-file-attach/${fileSeq}/img-links`, {
+      imgLinks: imgLinks,
+    });
+    return response.data;
+  },
+
+  // =====================================================
+  // 이미지 게시판 관련 API
+  // =====================================================
+
+  /**
+   * 이미지 게시판 목록 조회 (페이징/검색)
+   * @param {Object} params - 조회 파라미터 (page, size, searchType, searchKeyword, sortBy, sortDirection)
+   * @returns {Promise<Object>} 이미지 게시판 목록 (페이징 정보 포함)
+   */
+  getImageBoardList: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    const response = await api.get(`/api/consultation/statistics${query ? `?${query}` : ''}`);
+    const response = await api.get(`/api/image-board/list${query ? `?${query}` : ''}`);
     return response.data;
   },
 
   /**
-   * 상담 알림 발송
-   * @param {string|number} seq - 상담 시퀀스
-   * @param {Object} notificationData - 알림 데이터
-   * @returns {Promise<Object>} 알림 발송 결과
+   * 이미지 게시판 상세 조회
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @returns {Promise<Object>} 이미지 게시판 상세 정보
    */
-  sendNotification: async (seq, notificationData) => {
-    const response = await api.post(`/api/consultation/${seq}/notify`, notificationData);
+  getImageBoardDetail: async (imgBrdSeq) => {
+    const response = await api.get(`/api/image-board/${imgBrdSeq}`);
     return response.data;
   },
 
   /**
-   * 상담 템플릿 목록 조회
-   * @param {Object} params - 조회 파라미터
-   * @returns {Promise<Object>} 템플릿 목록
+   * 이미지 게시판과 이미지 파일들을 함께 조회
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @returns {Promise<Object>} 이미지 게시판 정보 (이미지 파일 목록 포함)
    */
-  getTemplates: async (params = {}) => {
+  getImageBoardWithFiles: async (imgBrdSeq) => {
+    const response = await api.get(`/api/image-board/${imgBrdSeq}/with-files`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 게시판 등록
+   * @param {Object} data - 이미지 게시판 데이터
+   * @returns {Promise<Object>} 등록된 이미지 게시판 정보
+   */
+  createImageBoard: async (data) => {
+    const response = await api.post('/api/image-board', data);
+    return response.data;
+  },
+
+  /**
+   * 이미지 게시판 수정
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @param {Object} data - 수정할 데이터
+   * @returns {Promise<Object>} 수정된 이미지 게시판 정보
+   */
+  updateImageBoard: async (imgBrdSeq, data) => {
+    const response = await api.put(`/api/image-board/${imgBrdSeq}`, data);
+    return response.data;
+  },
+
+  /**
+   * 이미지 게시판 삭제
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @returns {Promise<Object>} 삭제 결과
+   */
+  deleteImageBoard: async (imgBrdSeq) => {
+    const response = await api.delete(`/api/image-board/${imgBrdSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 최근 등록된 이미지 게시판 목록 조회
+   * @param {number} limit - 조회 개수 제한
+   * @returns {Promise<Array>} 이미지 게시판 목록
+   */
+  getRecentImageBoardList: async (limit = 5) => {
+    const response = await api.get(`/api/image-board/recent?limit=${limit}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 게시판 제목 중복 확인
+   * @param {string} imgBrdTitl - 이미지 게시판 제목
+   * @returns {Promise<Object>} 중복 여부
+   */
+  checkImageBoardTitle: async (imgBrdTitl) => {
+    const response = await api.get(`/api/image-board/check-title?imgBrdTitl=${imgBrdTitl}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 게시판 선택 통계 조회
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @returns {Promise<Object>} 선택 통계 정보
+   */
+  getImageBoardStatistics: async (imgBrdSeq) => {
+    const response = await api.get(`/api/image-board/${imgBrdSeq}/statistics`);
+    return response.data;
+  },
+
+  // =====================================================
+  // 이미지 파일 관련 API
+  // =====================================================
+
+  /**
+   * 이미지 파일 목록 조회 (페이징/검색)
+   * @param {Object} params - 조회 파라미터 (page, size, searchType, searchKeyword, imgBrdSeq, sortBy, sortDirection)
+   * @returns {Promise<Object>} 이미지 파일 목록 (페이징 정보 포함)
+   */
+  getImageFileList: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    const response = await api.get(`/api/consultation/templates${query ? `?${query}` : ''}`);
+    const response = await api.get(`/api/image-file/list${query ? `?${query}` : ''}`);
     return response.data;
   },
 
   /**
-   * 상담 템플릿으로 답변 생성
-   * @param {string|number} seq - 상담 시퀀스
-   * @param {string|number} templateSeq - 템플릿 시퀀스
-   * @param {Object} answerData - 답변 데이터
-   * @returns {Promise<Object>} 답변 생성 결과
+   * 이미지 파일 상세 조회
+   * @param {string|number} imgFileSeq - 이미지 파일 시퀀스
+   * @returns {Promise<Object>} 이미지 파일 상세 정보
    */
-  createAnswerFromTemplate: async (seq, templateSeq, answerData) => {
-    const response = await api.post(`/api/consultation/${seq}/answer/template/${templateSeq}`, answerData);
+  getImageFileDetail: async (imgFileSeq) => {
+    const response = await api.get(`/api/image-file/${imgFileSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 게시판별 이미지 파일 목록 조회
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @returns {Promise<Array>} 이미지 파일 목록
+   */
+  getImageFileByBrdSeq: async (imgBrdSeq) => {
+    const response = await api.get(`/api/image-file/board/${imgBrdSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 파일 업로드
+   * @param {FormData} formData - 파일 데이터 (file, imgBrdSeq, imgText, regEmpId)
+   * @returns {Promise<Object>} 업로드된 이미지 파일 정보
+   */
+  uploadImageFile: async (formData) => {
+    const response = await api.post('/api/image-file/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  /**
+   * 이미지 파일 다운로드
+   * @param {string|number} imgFileSeq - 이미지 파일 시퀀스
+   * @returns {Promise<Blob>} 이미지 파일 데이터
+   */
+  downloadImageFile: async (imgFileSeq) => {
+    const response = await api.get(`/api/image-file/download/${imgFileSeq}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  /**
+   * 이미지 파일 미리보기
+   * @param {string|number} imgFileSeq - 이미지 파일 시퀀스
+   * @returns {Promise<Blob>} 이미지 데이터
+   */
+  previewImageFile: async (imgFileSeq) => {
+    const response = await api.get(`/api/image-file/preview/${imgFileSeq}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  /**
+   * 이미지 파일 수정
+   * @param {string|number} imgFileSeq - 이미지 파일 시퀀스
+   * @param {Object} data - 수정할 데이터
+   * @returns {Promise<Object>} 수정된 이미지 파일 정보
+   */
+  updateImageFile: async (imgFileSeq, data) => {
+    const response = await api.put(`/api/image-file/${imgFileSeq}`, data);
+    return response.data;
+  },
+
+  /**
+   * 이미지 파일 삭제
+   * @param {string|number} imgFileSeq - 이미지 파일 시퀀스
+   * @returns {Promise<Object>} 삭제 결과
+   */
+  deleteImageFile: async (imgFileSeq) => {
+    const response = await api.delete(`/api/image-file/${imgFileSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 순서 업데이트
+   * @param {string|number} imgFileSeq - 이미지 파일 시퀀스
+   * @param {number} imgOrd - 이미지 순서
+   * @returns {Promise<Object>} 업데이트 결과
+   */
+  updateImageOrder: async (imgFileSeq, imgOrd) => {
+    const response = await api.put(`/api/image-file/${imgFileSeq}/order?imgOrd=${imgOrd}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 텍스트 업데이트
+   * @param {string|number} imgFileSeq - 이미지 파일 시퀀스
+   * @param {string} imgText - 이미지 텍스트
+   * @returns {Promise<Object>} 업데이트 결과
+   */
+  updateImageText: async (imgFileSeq, imgText) => {
+    const response = await api.put(`/api/image-file/${imgFileSeq}/text?imgText=${imgText}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 파일명 중복 확인
+   * @param {string} imgFileNm - 이미지 파일명
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @returns {Promise<Object>} 중복 여부
+   */
+  checkImageFileName: async (imgFileNm, imgBrdSeq) => {
+    const response = await api.get(`/api/image-file/check-filename?imgFileNm=${imgFileNm}&imgBrdSeq=${imgBrdSeq}`);
+    return response.data;
+  },
+
+  // =====================================================
+  // 이미지 선택 관련 API
+  // =====================================================
+
+  /**
+   * 이미지 선택 목록 조회 (페이징/검색)
+   * @param {Object} params - 조회 파라미터 (page, size, searchType, searchKeyword, imgBrdSeq, imgFileSeq, selEmpId, sortBy, sortDirection)
+   * @returns {Promise<Object>} 이미지 선택 목록 (페이징 정보 포함)
+   */
+  getImageSelectionList: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const response = await api.get(`/api/image-selection/list${query ? `?${query}` : ''}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 선택 상세 조회
+   * @param {string|number} imgSelSeq - 이미지 선택 시퀀스
+   * @returns {Promise<Object>} 이미지 선택 상세 정보
+   */
+  getImageSelectionDetail: async (imgSelSeq) => {
+    const response = await api.get(`/api/image-selection/${imgSelSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 게시판별 선택 목록 조회
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @returns {Promise<Array>} 이미지 선택 목록
+   */
+  getImageSelectionByBrdSeq: async (imgBrdSeq) => {
+    const response = await api.get(`/api/image-selection/board/${imgBrdSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 직원별 선택 목록 조회
+   * @param {string} selEmpId - 선택한 직원 ID
+   * @returns {Promise<Array>} 이미지 선택 목록
+   */
+  getImageSelectionByEmpId: async (selEmpId) => {
+    const response = await api.get(`/api/image-selection/employee/${selEmpId}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 파일별 선택 목록 조회
+   * @param {string|number} imgFileSeq - 이미지 파일 시퀀스
+   * @returns {Promise<Array>} 이미지 선택 목록
+   */
+  getImageSelectionByFileSeq: async (imgFileSeq) => {
+    const response = await api.get(`/api/image-selection/file/${imgFileSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 선택 등록
+   * @param {Object} data - 이미지 선택 데이터
+   * @returns {Promise<Object>} 등록된 이미지 선택 정보
+   */
+  createImageSelection: async (data) => {
+    const response = await api.post('/api/image-selection', data);
+    return response.data;
+  },
+
+  /**
+   * 이미지 선택 삭제
+   * @param {string|number} imgSelSeq - 이미지 선택 시퀀스
+   * @returns {Promise<Object>} 삭제 결과
+   */
+  deleteImageSelection: async (imgSelSeq) => {
+    const response = await api.delete(`/api/image-selection/${imgSelSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 직원별 이미지 선택 삭제
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @param {string} selEmpId - 선택한 직원 ID
+   * @returns {Promise<Object>} 삭제 결과
+   */
+  deleteImageSelectionByEmpId: async (imgBrdSeq, selEmpId) => {
+    const response = await api.delete(`/api/image-selection/board/${imgBrdSeq}/employee/${selEmpId}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 선택 여부 확인
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @param {string|number} imgFileSeq - 이미지 파일 시퀀스
+   * @param {string} selEmpId - 선택한 직원 ID
+   * @returns {Promise<Object>} 선택 여부
+   */
+  checkImageSelection: async (imgBrdSeq, imgFileSeq, selEmpId) => {
+    const response = await api.get(`/api/image-selection/check?imgBrdSeq=${imgBrdSeq}&imgFileSeq=${imgFileSeq}&selEmpId=${selEmpId}`);
+    return response.data;
+  },
+
+  /**
+   * 직원의 선택 개수 조회
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @param {string} selEmpId - 선택한 직원 ID
+   * @returns {Promise<Object>} 선택 개수
+   */
+  getImageSelectionCountByEmpId: async (imgBrdSeq, selEmpId) => {
+    const response = await api.get(`/api/image-selection/count/employee?imgBrdSeq=${imgBrdSeq}&selEmpId=${selEmpId}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 파일의 선택 개수 조회
+   * @param {string|number} imgFileSeq - 이미지 파일 시퀀스
+   * @returns {Promise<Object>} 선택 개수
+   */
+  getImageSelectionCountByFileSeq: async (imgFileSeq) => {
+    const response = await api.get(`/api/image-selection/count/file/${imgFileSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 게시판의 전체 선택 개수 조회
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @returns {Promise<Object>} 전체 선택 개수
+   */
+  getImageSelectionCountByBrdSeq: async (imgBrdSeq) => {
+    const response = await api.get(`/api/image-selection/count/board/${imgBrdSeq}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 선택 토글 (선택/해제)
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @param {string|number} imgFileSeq - 이미지 파일 시퀀스
+   * @param {string} selEmpId - 선택한 직원 ID
+   * @returns {Promise<Object>} 토글 결과
+   */
+  toggleImageSelection: async (imgBrdSeq, imgFileSeq, selEmpId) => {
+    const response = await api.post(`/api/image-selection/toggle?imgBrdSeq=${imgBrdSeq}&imgFileSeq=${imgFileSeq}&selEmpId=${selEmpId}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 선택 가능 여부 확인 (최대 선택 개수 체크)
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @param {string} selEmpId - 선택한 직원 ID
+   * @param {number} maxSelCnt - 최대 선택 개수
+   * @returns {Promise<Object>} 선택 가능 여부
+   */
+  canSelectImage: async (imgBrdSeq, selEmpId, maxSelCnt) => {
+    const response = await api.get(`/api/image-selection/can-select?imgBrdSeq=${imgBrdSeq}&selEmpId=${selEmpId}&maxSelCnt=${maxSelCnt}`);
+    return response.data;
+  },
+
+  /**
+   * 이미지 선택 통계 조회
+   * @param {string|number} imgBrdSeq - 이미지 게시판 시퀀스
+   * @returns {Promise<Object>} 선택 통계 정보
+   */
+  getImageSelectionStatistics: async (imgBrdSeq) => {
+    const response = await api.get(`/api/image-selection/statistics/${imgBrdSeq}`);
     return response.data;
   },
 
@@ -228,72 +632,69 @@ export const consultationAPI = {
 
   /**
    * 전문가 상담 신청 등록
-   * @param {Object} expertConsultationData - 전문가 상담 신청 데이터
-   * @param {string} empId - 직원 ID
+   * @param {FormData} formData - 신청 데이터 (파일 포함)
    * @returns {Promise<Object>} 등록 결과
    */
-  createExpertConsultation: async (expertConsultationData, empId) => {
-    const response = await api.post(`/api/expert-consultation/create?empId=${empId}`, expertConsultationData);
+  createExpertConsultation: async (formData) => {
+    const response = await api.post('/api/expert-consultation/create', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
   /**
    * 전문가 상담 신청 수정
    * @param {string|number} appSeq - 신청 시퀀스
-   * @param {Object} expertConsultationData - 수정할 데이터
-   * @param {string} empId - 직원 ID
+   * @param {FormData} formData - 수정할 데이터 (파일 포함)
    * @returns {Promise<Object>} 수정 결과
    */
-  updateExpertConsultation: async (appSeq, expertConsultationData, empId) => {
-    const response = await api.put(`/api/expert-consultation/${appSeq}?empId=${empId}`, expertConsultationData);
+  updateExpertConsultation: async (appSeq, formData) => {
+    const response = await api.put(`/api/expert-consultation/${appSeq}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
   /**
    * 전문가 상담 신청 삭제
    * @param {string|number} appSeq - 신청 시퀀스
-   * @param {string} empId - 직원 ID
    * @returns {Promise<Object>} 삭제 결과
    */
-  deleteExpertConsultation: async (appSeq, empId) => {
-    const response = await api.delete(`/api/expert-consultation/${appSeq}?empId=${empId}`);
+  deleteExpertConsultation: async (appSeq) => {
+    const response = await api.delete(`/api/expert-consultation/${appSeq}`);
     return response.data;
   },
 
   /**
    * 내 전문가 상담 신청 목록 조회
    * @param {Object} params - 조회 파라미터 (page, size)
-   * @param {string} empId - 직원 ID
    * @returns {Promise<Object>} 내 전문가 상담 신청 목록 (페이징 정보 포함)
    */
-  getMyExpertConsultationList: async (params = {}, empId) => {
-    const query = new URLSearchParams({ ...params, empId }).toString();
-    const response = await api.get(`/api/expert-consultation/my-list?${query}`);
+  getMyExpertConsultationList: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const response = await api.get(`/api/expert-consultation/my${query ? `?${query}` : ''}`);
     return response.data;
   },
 
   /**
-   * 전문가 상담 신청 승인/반려
+   * 전문가 상담 승인 상태 업데이트
    * @param {string|number} appSeq - 신청 시퀀스
-   * @param {string} aprvStsCd - 승인상태코드 (APPROVED/REJECTED)
-   * @param {string} aprvEmpId - 승인자 직원 ID
-   * @param {string} rejRsn - 반려사유 (반려시에만)
-   * @returns {Promise<Object>} 승인/반려 결과
+   * @param {Object} data - 승인 데이터 (aprvStsCd, aprvEmpId, rejRsn)
+   * @returns {Promise<Object>} 업데이트 결과
    */
-  updateExpertConsultationApproval: async (appSeq, aprvStsCd, aprvEmpId, rejRsn = null) => {
-    const params = new URLSearchParams({
-      aprvStsCd,
-      aprvEmpId,
-      ...(rejRsn && { rejRsn })
-    });
-    const response = await api.put(`/api/expert-consultation/${appSeq}/approval?${params.toString()}`);
+  updateExpertConsultationApproval: async (appSeq, data) => {
+    const response = await api.put(`/api/expert-consultation/${appSeq}/approval`, data);
     return response.data;
   },
 
   /**
    * 상담사 스케줄 조회
-   * @param {Object} params - 조회 파라미터 (cnslrEmpId, schDt, schTyCd 등)
-   * @returns {Promise<Object>} 상담사 스케줄 목록
+   * @param {Object} params - 조회 파라미터 (cnslrEmpId, schDt, schTyCd)
+   * @returns {Promise<Array>} 상담사 스케줄 목록
    */
   getCounselorSchedule: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
@@ -303,23 +704,22 @@ export const consultationAPI = {
 
   /**
    * 상담사 정보 조회
-   * @param {Object} params - 조회 파라미터 (cnslrEmpId, cnslrClsfCd, availYn 등)
-   * @returns {Promise<Object>} 상담사 정보 목록
+   * @param {string} cnslrEmpId - 상담사 직원 ID
+   * @returns {Promise<Object>} 상담사 정보
    */
-  getCounselorInfo: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    const response = await api.get(`/api/counselor-info/list${query ? `?${query}` : ''}`);
+  getCounselorInfo: async (cnslrEmpId) => {
+    const response = await api.get(`/api/counselor-info/${cnslrEmpId}`);
     return response.data;
   },
 
   /**
    * 상담 시간 제한 조회
-   * @param {Object} params - 조회 파라미터 (cnslDt, cnslTm, availYn 등)
-   * @returns {Promise<Object>} 상담 시간 제한 목록
+   * @param {Object} params - 조회 파라미터 (cnslDt, cnslTm)
+   * @returns {Promise<Object>} 상담 시간 제한 정보
    */
   getConsultationTimeLimit: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    const response = await api.get(`/api/consultation-time-limit/list${query ? `?${query}` : ''}`);
+    const response = await api.get(`/api/consultation-time-limit/info${query ? `?${query}` : ''}`);
     return response.data;
-  }
+  },
 };
