@@ -1,4 +1,4 @@
-import { api } from './apiClient';
+import { api } from '../apiClient';
 
 /**
  * 이미지 파일 API

@@ -6,15 +6,31 @@ import { useEffect, useState } from 'react';
 import HeaderArea from './HeaderArea';
 
 
-const LnbLayout = ({ children, title }) => {
+const LnbLayout = ({ children, title, onMenuSelect, initialActiveMenu }) => {
   const menuItems = useLnbMenuStore((state) => state.menuItems);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeMenu, setActiveMenu] = useState('');
+  const [activeMenu, setActiveMenu] = useState(initialActiveMenu || '');
+
+  console.log('LnbLayout 렌더링:', { title, menuItemsLength: menuItems.length, isCollapsed, activeMenu, initialActiveMenu });
+
+  // initialActiveMenu가 변경될 때 activeMenu 업데이트
+  useEffect(() => {
+    if (initialActiveMenu && initialActiveMenu !== activeMenu) {
+      console.log('initialActiveMenu 변경됨:', initialActiveMenu);
+      setActiveMenu(initialActiveMenu);
+    }
+  }, [initialActiveMenu, activeMenu]);
 
   // 메뉴 클릭 핸들러
   const handleMenuClick = (e, item) => {
     e.preventDefault();
     setActiveMenu(item.key);
+
+    // 메뉴 선택 콜백 호출
+    if (onMenuSelect) {
+      onMenuSelect(item.key);
+    }
+
     const targetId = item.href.replace('#', '');
     const targetElement = document.getElementById(targetId);
     if (targetElement) {
@@ -24,6 +40,10 @@ const LnbLayout = ({ children, title }) => {
 
   // 스크롤 위치에 따른 활성 메뉴 감지
   useEffect(() => {
+    console.log('LnbLayout - 스크롤 useEffect 실행:', { menuItemsLength: menuItems.length });
+
+    if (!menuItems || menuItems.length === 0) return;
+
     const handleScroll = () => {
       const sections = menuItems.map(item => ({
         key: item.key,
@@ -40,7 +60,7 @@ const LnbLayout = ({ children, title }) => {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [menuItems]);
+  }, [menuItems.length]); // menuItems.length로 변경하여 무한 리프레시 방지
 
   return (
     <>
@@ -49,7 +69,7 @@ const LnbLayout = ({ children, title }) => {
         {/* Left Navigation Bar */}
         <div className={`bg-white shadow-lg transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between p-8 border-b border-gray-200">
             {!isCollapsed && (
               <h1 className="text-lg font-semibold text-gray-800">{title}</h1>
             )}
@@ -62,7 +82,7 @@ const LnbLayout = ({ children, title }) => {
             </button>
           </div>
           {/* Menu Items */}
-          <nav className="p-2">
+          <nav className="p-8">
             <ul className="space-y-1">
               {menuItems.map((item) => (
                 <li key={item.key}>

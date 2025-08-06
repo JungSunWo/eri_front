@@ -1,15 +1,16 @@
 'use client';
 
 import { authManagementAPI, permissionAPI } from '@/app/core/services/api';
-import { CmpButton } from '@/app/shared/components/button/cmp_button';
+import CmpButton from '@/app/shared/components/button/cmp_button';
 import { CmpNoData } from '@/app/shared/components/etc/cmp_noData';
 import CmpInput from '@/app/shared/components/ui/CmpInput';
 import CmpSelect from '@/app/shared/components/ui/CmpSelect';
 import CmpTab from '@/app/shared/components/ui/CmpTab';
 import CommonModal from '@/app/shared/components/ui/CommonModal';
 import DataTable from '@/app/shared/components/ui/DataTable';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
-import { alert } from '@/app/shared/utils/ui_com';
+import { alert, toast } from '@/app/shared/utils/ui_com';
 import { useEffect, useState } from 'react';
 import {
     ActionButtons,
@@ -38,7 +39,6 @@ const AuthManagementPage = () => {
   const [modalType, setModalType] = useState('add');
   const [selectedItem, setSelectedItem] = useState(null);
   const [formData, setFormData] = useState({});
-  const [loading, setLoading] = useState(false);
 
   // Search states
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,124 +61,383 @@ const AuthManagementPage = () => {
     { key: 'permissions', label: '권한 관리' },
   ];
 
-  // Load data on component mount and tab change
-  useEffect(() => {
-    loadData();
-  }, [activeTab]);
+  // Query parameters for each tab
+  const usersQueryParams = {
+    search: searchTerm,
+    status: statusFilter,
+    role: roleFilter
+  };
 
-  // Load roles for user form
-  useEffect(() => {
-    if (activeTab === 'users') {
-      loadRolesForSelect();
+  const rolesQueryParams = {
+    search: searchTerm
+  };
+
+  const permissionsQueryParams = {
+    page: permissionPage,
+    size: 10,
+    ...permissionSearch,
+    sortKey: 'authLvl',
+    sortOrder: 'desc'
+  };
+
+  // Users query
+  const {
+    data: usersData,
+    isLoading: usersLoading,
+    error: usersError,
+    refetch: refetchUsers
+  } = useQuery(
+    ['users-list', usersQueryParams],
+    () => authManagementAPI.getUsers(usersQueryParams),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+      enabled: activeTab === 'users'
     }
-  }, [activeTab]);
+  );
 
-  // 권한 목록 로드
-  const loadPermissions = async (page = 1) => {
-    const res = await permissionAPI.getList({
-      page,
-      size: 10,
-      ...permissionSearch,
-      sortKey: 'authLvl',
-      sortOrder: 'desc'
-    });
-    setPermissions(res.content || []);
-    setPermissionTotalPages(res.totalPages || 1);
-    setPermissionPage(page);
-  };
-
-  // 권한 등록
-  const handleCreatePermission = async (data) => {
-    await permissionAPI.create(data);
-    loadPermissions(permissionPage);
-  };
-
-  // 권한 수정
-  const handleUpdatePermission = async (authCd, data) => {
-    await permissionAPI.update(authCd, data);
-    loadPermissions(permissionPage);
-  };
-
-  // 권한 삭제
-  const handleDeletePermission = async (authCd) => {
-    await permissionAPI.remove(authCd);
-    loadPermissions(permissionPage);
-  };
-
-  // 권한 상세
-  const handleGetPermission = async (authCd) => {
-    return await permissionAPI.get(authCd);
-  };
-
-  // DataTable 컬럼 정의 (백엔드 필드명 기준)
-  const permissionColumns = [
-    { key: 'authNm', header: '권한명' },
-    { key: 'authCd', header: '권한코드' },
-    { key: 'authDesc', header: '권한설명' },
-    { key: 'authLvl', header: '권한레벨', render: v => <span className="badge bg-primary">Level {v}</span> },
-    { key: 'regDate', header: '등록일시', render: v => formatDate(v) },
-    { key: 'updDate', header: '수정일시', render: v => formatDate(v) },
-  ];
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      switch (activeTab) {
-        case 'users':
-          const usersResponse = await authManagementAPI.getUsers({
-            search: searchTerm,
-            status: statusFilter,
-            role: roleFilter
-          });
-          setUsers(usersResponse.data || []);
-          break;
-        case 'roles':
-          const rolesResponse = await authManagementAPI.getRoles({
-            search: searchTerm
-          });
-          setRoles(rolesResponse.data || []);
-          break;
-        case 'permissions':
-          const permissionsResponse = await permissionAPI.getList({
-            page: permissionPage,
-            size: 10,
-            ...permissionSearch,
-            sortKey: 'authLvl',
-            sortOrder: 'desc'
-          });
-          setPermissions(permissionsResponse.content || []);
-          setPermissionTotalPages(permissionsResponse.totalPages || 1);
-          setPermissionPage(permissionPage);
-          break;
-      }
-    } catch (error) {
-      console.error('데이터 로드 실패:', error);
-      // API 인터셉터에서 이미 에러 알림을 처리하므로 여기서는 로그만 출력
-    } finally {
-      setLoading(false);
+  // Roles query
+  const {
+    data: rolesData,
+    isLoading: rolesLoading,
+    error: rolesError,
+    refetch: refetchRoles
+  } = useQuery(
+    ['roles-list', rolesQueryParams],
+    () => authManagementAPI.getRoles(rolesQueryParams),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+      enabled: activeTab === 'roles'
     }
-  };
+  );
 
-  const loadRolesForSelect = async () => {
-    try {
-      const response = await authManagementAPI.getRoles();
-      const rolesData = response.data || [];
+  // Permissions query
+  const {
+    data: permissionsData,
+    isLoading: permissionsLoading,
+    error: permissionsError,
+    refetch: refetchPermissions
+  } = useQuery(
+    ['permissions-list', permissionsQueryParams],
+    () => permissionAPI.getList(permissionsQueryParams),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+      enabled: activeTab === 'permissions'
+    }
+  );
+
+  // Roles for select options query
+  const {
+    data: rolesOptionsData,
+    isLoading: rolesOptionsLoading
+  } = useQuery(
+    ['roles-options'],
+    () => authManagementAPI.getRoles(),
+    {
+      cacheTime: 5 * 60 * 1000, // 5분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+      enabled: activeTab === 'users'
+    }
+  );
+
+  // User mutations
+  const {
+    mutate: createUserMutation,
+    isLoading: createUserLoading,
+    error: createUserError
+  } = useMutation(
+    'create-user',
+    (userData) => authManagementAPI.createUser(userData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('사용자가 성공적으로 등록되었습니다.');
+          setShowModal(false);
+          refetchUsers();
+        } else {
+          toast.callCommonToastOpen(response.message || '사용자 등록에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('사용자 등록 실패:', error);
+        toast.callCommonToastOpen('사용자 등록 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['users-list']]
+    }
+  );
+
+  const {
+    mutate: updateUserMutation,
+    isLoading: updateUserLoading,
+    error: updateUserError
+  } = useMutation(
+    'update-user',
+    ({ userId, userData }) => authManagementAPI.updateUser(userId, userData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('사용자 정보가 성공적으로 수정되었습니다.');
+          setShowModal(false);
+          refetchUsers();
+        } else {
+          toast.callCommonToastOpen(response.message || '사용자 수정에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('사용자 수정 실패:', error);
+        toast.callCommonToastOpen('사용자 수정 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['users-list']]
+    }
+  );
+
+  const {
+    mutate: deleteUserMutation,
+    isLoading: deleteUserLoading,
+    error: deleteUserError
+  } = useMutation(
+    'delete-user',
+    (userId) => authManagementAPI.deleteUser(userId),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('사용자가 성공적으로 삭제되었습니다.');
+          refetchUsers();
+        } else {
+          toast.callCommonToastOpen(response.message || '사용자 삭제에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('사용자 삭제 실패:', error);
+        toast.callCommonToastOpen('사용자 삭제 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['users-list']]
+    }
+  );
+
+  // Role mutations
+  const {
+    mutate: createRoleMutation,
+    isLoading: createRoleLoading,
+    error: createRoleError
+  } = useMutation(
+    'create-role',
+    (roleData) => authManagementAPI.createRole(roleData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('역할이 성공적으로 등록되었습니다.');
+          setShowModal(false);
+          refetchRoles();
+        } else {
+          toast.callCommonToastOpen(response.message || '역할 등록에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('역할 등록 실패:', error);
+        toast.callCommonToastOpen('역할 등록 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['roles-list']]
+    }
+  );
+
+  const {
+    mutate: updateRoleMutation,
+    isLoading: updateRoleLoading,
+    error: updateRoleError
+  } = useMutation(
+    'update-role',
+    ({ roleId, roleData }) => authManagementAPI.updateRole(roleId, roleData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('역할 정보가 성공적으로 수정되었습니다.');
+          setShowModal(false);
+          refetchRoles();
+        } else {
+          toast.callCommonToastOpen(response.message || '역할 수정에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('역할 수정 실패:', error);
+        toast.callCommonToastOpen('역할 수정 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['roles-list']]
+    }
+  );
+
+  const {
+    mutate: deleteRoleMutation,
+    isLoading: deleteRoleLoading,
+    error: deleteRoleError
+  } = useMutation(
+    'delete-role',
+    (roleId) => authManagementAPI.deleteRole(roleId),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('역할이 성공적으로 삭제되었습니다.');
+          refetchRoles();
+        } else {
+          toast.callCommonToastOpen(response.message || '역할 삭제에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('역할 삭제 실패:', error);
+        toast.callCommonToastOpen('역할 삭제 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['roles-list']]
+    }
+  );
+
+  // Permission mutations
+  const {
+    mutate: createPermissionMutation,
+    isLoading: createPermissionLoading,
+    error: createPermissionError
+  } = useMutation(
+    'create-permission',
+    (permissionData) => permissionAPI.create(permissionData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('권한이 성공적으로 등록되었습니다.');
+          setShowModal(false);
+          refetchPermissions();
+        } else {
+          toast.callCommonToastOpen(response.message || '권한 등록에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('권한 등록 실패:', error);
+        toast.callCommonToastOpen('권한 등록 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['permissions-list']]
+    }
+  );
+
+  const {
+    mutate: updatePermissionMutation,
+    isLoading: updatePermissionLoading,
+    error: updatePermissionError
+  } = useMutation(
+    'update-permission',
+    ({ authCd, permissionData }) => permissionAPI.update(authCd, permissionData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('권한 정보가 성공적으로 수정되었습니다.');
+          setShowModal(false);
+          refetchPermissions();
+        } else {
+          toast.callCommonToastOpen(response.message || '권한 수정에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('권한 수정 실패:', error);
+        toast.callCommonToastOpen('권한 수정 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['permissions-list']]
+    }
+  );
+
+  const {
+    mutate: deletePermissionMutation,
+    isLoading: deletePermissionLoading,
+    error: deletePermissionError
+  } = useMutation(
+    'delete-permission',
+    (authCd) => permissionAPI.remove(authCd),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('권한이 성공적으로 삭제되었습니다.');
+          refetchPermissions();
+        } else {
+          toast.callCommonToastOpen(response.message || '권한 삭제에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('권한 삭제 실패:', error);
+        toast.callCommonToastOpen('권한 삭제 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['permissions-list']]
+    }
+  );
+
+  // Data setting effects
+  useEffect(() => {
+    if (usersData?.data) {
+      setUsers(usersData.data || []);
+    }
+  }, [usersData]);
+
+  useEffect(() => {
+    if (rolesData?.data) {
+      setRoles(rolesData.data || []);
+    }
+  }, [rolesData]);
+
+  useEffect(() => {
+    if (permissionsData) {
+      setPermissions(permissionsData.content || []);
+      setPermissionTotalPages(permissionsData.totalPages || 1);
+    }
+  }, [permissionsData]);
+
+  useEffect(() => {
+    if (rolesOptionsData?.data) {
+      const rolesData = rolesOptionsData.data || [];
       setRolesOptions(rolesData.map(role => ({
         value: role.name,
         label: role.name
       })));
-    } catch (error) {
-      console.error('역할 목록 로드 실패:', error);
     }
+  }, [rolesOptionsData]);
+
+  // Loading states
+  const loading = usersLoading || rolesLoading || permissionsLoading ||
+                 createUserLoading || updateUserLoading || deleteUserLoading ||
+                 createRoleLoading || updateRoleLoading || deleteRoleLoading ||
+                 createPermissionLoading || updatePermissionLoading || deletePermissionLoading;
+
+  // Error handling
+  const getErrorMessage = (error) => {
+    if (!error) return '';
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    if (error.type === 'response') {
+      return `서버 오류 (${error.status}): ${error.message}`;
+    } else if (error.type === 'network') {
+      return '네트워크 연결 오류가 발생했습니다.';
+    } else if (error.type === 'request') {
+      return `요청 오류: ${error.message}`;
+    }
+
+    return error.message || '알 수 없는 오류가 발생했습니다.';
   };
 
   // Search and filter handlers
   const handleSearch = () => {
-    loadData();
+    // Queries will automatically refetch when parameters change
   };
 
   const handleFilterChange = () => {
-    loadData();
+    // Queries will automatically refetch when parameters change
+  };
+
+  // Permission page change
+  const handlePermissionPageChange = (page) => {
+    setPermissionPage(page);
   };
 
   // Table columns for each tab
@@ -308,24 +567,21 @@ const AuthManagementPage = () => {
       '삭제 확인',
       `정말 ${itemName}을(를) 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.`,
       {
-        okCallback: async () => {
+        okCallback: () => {
           try {
             switch (activeTab) {
               case 'users':
-                await authManagementAPI.deleteUser(item.id);
+                deleteUserMutation(item.id);
                 break;
               case 'roles':
-                await authManagementAPI.deleteRole(item.id);
+                deleteRoleMutation(item.id);
                 break;
               case 'permissions':
-                await permissionAPI.remove(item.authCd);
+                deletePermissionMutation(item.authCd);
                 break;
             }
-            alert.AlertOpen('삭제 완료', '성공적으로 삭제되었습니다.');
-            loadData(); // 데이터 다시 로드
           } catch (error) {
             console.error('삭제 실패:', error);
-            // API 인터셉터에서 에러 알림 처리
           }
         },
         cancelCallback: () => {
@@ -340,11 +596,11 @@ const AuthManagementPage = () => {
   const handleSave = async () => {
     // Validation
     if (!formData.name && activeTab !== 'users') {
-      alert.AlertOpen('입력 오류', '이름을 입력해주세요.');
+      toast.callCommonToastOpen('이름을 입력해주세요.');
       return;
     }
     if (!formData.username && activeTab === 'users') {
-      alert.AlertOpen('입력 오류', '사용자명을 입력해주세요.');
+      toast.callCommonToastOpen('사용자명을 입력해주세요.');
       return;
     }
 
@@ -353,36 +609,31 @@ const AuthManagementPage = () => {
         // Add logic here
         switch (activeTab) {
           case 'users':
-            await authManagementAPI.createUser(formData);
+            createUserMutation(formData);
             break;
           case 'roles':
-            await authManagementAPI.createRole(formData);
+            createRoleMutation(formData);
             break;
           case 'permissions':
-            await permissionAPI.create(formData);
+            createPermissionMutation(formData);
             break;
         }
-        alert.AlertOpen('추가 완료', '성공적으로 추가되었습니다.');
       } else {
         // Edit logic here
         switch (activeTab) {
           case 'users':
-            await authManagementAPI.updateUser(selectedItem.id, formData);
+            updateUserMutation({ userId: selectedItem.id, userData: formData });
             break;
           case 'roles':
-            await authManagementAPI.updateRole(selectedItem.id, formData);
+            updateRoleMutation({ roleId: selectedItem.id, roleData: formData });
             break;
           case 'permissions':
-            await permissionAPI.update(selectedItem.authCd, formData);
+            updatePermissionMutation({ authCd: selectedItem.authCd, permissionData: formData });
             break;
         }
-        alert.AlertOpen('수정 완료', '성공적으로 수정되었습니다.');
       }
-      setShowModal(false);
-      loadData(); // 데이터 다시 로드
     } catch (error) {
       console.error('저장 실패:', error);
-      // API 인터셉터에서 에러 알림 처리
     }
   };
 
@@ -454,6 +705,7 @@ const AuthManagementPage = () => {
                 label={isEdit ? '수정' : '추가'}
                 styleType="primary"
                 click={handleSave}
+                disabled={loading}
               />
             </div>
           </ModalContent>
@@ -512,6 +764,7 @@ const AuthManagementPage = () => {
                 label={isEdit ? '수정' : '추가'}
                 styleType="primary"
                 click={handleSave}
+                disabled={loading}
               />
             </div>
           </ModalContent>
@@ -574,6 +827,7 @@ const AuthManagementPage = () => {
                 label={isEdit ? '수정' : '추가'}
                 styleType="primary"
                 click={handleSave}
+                disabled={loading}
               />
             </div>
           </ModalContent>
@@ -590,6 +844,30 @@ const AuthManagementPage = () => {
       subtitle="사용자, 역할, 권한을 관리할 수 있습니다."
       showCard={false}
     >
+      {/* 에러 메시지 표시 */}
+      {(usersError || rolesError || permissionsError ||
+        createUserError || updateUserError || deleteUserError ||
+        createRoleError || updateRoleError || deleteRoleError ||
+        createPermissionError || updatePermissionError || deletePermissionError) && (
+        <div className="mb-6 p-4 bg-red-50 rounded border border-red-200">
+          <div className="font-medium text-red-800 mb-1">오류가 발생했습니다:</div>
+          <div className="text-sm text-red-600">
+            {usersError && <div>사용자 목록: {getErrorMessage(usersError)}</div>}
+            {rolesError && <div>역할 목록: {getErrorMessage(rolesError)}</div>}
+            {permissionsError && <div>권한 목록: {getErrorMessage(permissionsError)}</div>}
+            {createUserError && <div>사용자 등록: {getErrorMessage(createUserError)}</div>}
+            {updateUserError && <div>사용자 수정: {getErrorMessage(updateUserError)}</div>}
+            {deleteUserError && <div>사용자 삭제: {getErrorMessage(deleteUserError)}</div>}
+            {createRoleError && <div>역할 등록: {getErrorMessage(createRoleError)}</div>}
+            {updateRoleError && <div>역할 수정: {getErrorMessage(updateRoleError)}</div>}
+            {deleteRoleError && <div>역할 삭제: {getErrorMessage(deleteRoleError)}</div>}
+            {createPermissionError && <div>권한 등록: {getErrorMessage(createPermissionError)}</div>}
+            {updatePermissionError && <div>권한 수정: {getErrorMessage(updatePermissionError)}</div>}
+            {deletePermissionError && <div>권한 삭제: {getErrorMessage(deletePermissionError)}</div>}
+          </div>
+        </div>
+      )}
+
       <TabContainer>
         <CmpTab
           tabs={tabs}
@@ -607,7 +885,7 @@ const AuthManagementPage = () => {
               style={{ minWidth: '200px' }}
               onKeyDown={
                 activeTab === 'permissions'
-                  ? (e) => { if (e.key === 'Enter') loadPermissions(1); }
+                  ? (e) => { if (e.key === 'Enter') setPermissionPage(1); }
                   : (e) => { if (e.key === 'Enter') handleSearch(); }
               }
             />
@@ -659,14 +937,15 @@ const AuthManagementPage = () => {
                   onChange={(e) => setPermissionSearch(prev => ({ ...prev, keyword: e.target.value }))}
                   placeholder="검색어를 입력하세요"
                   style={{ minWidth: '200px' }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') loadPermissions(1); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') setPermissionPage(1); }}
                 />
               </>
             )}
             <CmpButton
               label="검색"
               styleType="primary"
-              click={activeTab === 'permissions' ? () => loadPermissions(1) : handleSearch}
+              click={activeTab === 'permissions' ? () => setPermissionPage(1) : handleSearch}
+              disabled={loading}
             />
           </SearchSection>
 
@@ -685,6 +964,7 @@ const AuthManagementPage = () => {
                 activeTab === 'roles' ? '역할 추가' : '권한 추가'}
               styleType="primary"
               click={handleAdd}
+              disabled={loading}
             />
           </ActionSection>
 
@@ -699,6 +979,9 @@ const AuthManagementPage = () => {
               showStatusBadge={activeTab === 'users'}
               headerBgColor="#f8f9fa"
               className="bg-white rounded-lg shadow"
+              currentPage={activeTab === 'permissions' ? permissionPage : 1}
+              totalPages={activeTab === 'permissions' ? permissionTotalPages : 1}
+              onPageChange={activeTab === 'permissions' ? handlePermissionPageChange : undefined}
             />
           ) : (
             <CmpNoData

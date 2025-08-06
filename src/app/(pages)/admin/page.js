@@ -1,7 +1,7 @@
 "use client";
 
 import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
-import { CmpButton } from '@/app/shared/components/button/cmp_button';
+import CmpButton from '@/app/shared/components/button/cmp_button';
 import { CmpSection, CmpSectionBody, CmpSectionHead } from '@/app/shared/components/contents/cmp_section/cmp_section';
 import { useState } from 'react';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { CmpButton } from '@/app/shared/components/button/cmp_button';
+import CmpButton from '@/app/shared/components/button/cmp_button';
 import styled from 'styled-components';
 
 // Styled components

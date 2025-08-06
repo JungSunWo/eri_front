@@ -1,9 +1,9 @@
 'use client';
 
-import { commonCodeAPI } from '@/app/core/services/api/commonCodeAPI';
-import { consultationAPI } from '@/app/core/services/api/consultationAPI';
-import { CmpButton, CmpInput, CmpSelect, CmpTextarea } from '@/app/shared/components/ui';
-import { alert } from '@/app/shared/utils/ui_com';
+import { commonCodeAPI } from '@/api/commonCodeAPI';
+import { consultationAPI } from '@/api/consultationAPI';
+import { CmpButton, CmpInput, CmpSelect, CmpTextarea } from '@/components/ui';
+import { alert } from '@/utils/ui_com';
 import { useEffect, useState } from 'react';
 
 const ConsultationPopup = ({ isOpen, onClose, onSuccess }) => {

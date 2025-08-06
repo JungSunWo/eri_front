@@ -1,83 +1,87 @@
-import { api } from './apiClient';
+import { api } from '../apiClient';
 
 /**
  * 관리자 관련 API
  */
 
-// 관리자 목록 조회
-export const getAdminList = async (params = {}) => {
-  try {
-    const response = await api.get('/api/admin/list', { params });
-    return response.data;
-  } catch (error) {
-    console.error('관리자 목록 조회 실패:', error);
-    throw error;
-  }
-};
-
-// 관리자 등록
-export const createAdmin = async (adminData) => {
-  try {
-    const response = await api.post('/api/admin/register', adminData);
-    return response.data;
-  } catch (error) {
-    console.error('관리자 등록 실패:', error);
-    // 백엔드에서 반환한 오류 메시지를 그대로 반환
-    if (error.response?.data) {
-      return error.response.data;
+class AdminAPI {
+  // 관리자 목록 조회
+  async getAdminList(params = {}) {
+    try {
+      const response = await api.get('/api/admin/list', { params });
+      return response.data;
+    } catch (error) {
+      console.error('관리자 목록 조회 실패:', error);
+      throw error;
     }
-    throw error;
   }
-};
 
-// 관리자 수정
-export const updateAdmin = async (adminId, adminData) => {
-  try {
-    const response = await api.put(`/api/admin/${adminId}`, adminData);
-    return response.data;
-  } catch (error) {
-    console.error('관리자 수정 실패:', error);
-    // 백엔드에서 반환한 오류 메시지를 그대로 반환
-    if (error.response?.data) {
-      return error.response.data;
+  // 관리자 등록
+  async createAdmin(adminData) {
+    try {
+      const response = await api.post('/api/admin/register', adminData);
+      return response.data;
+    } catch (error) {
+      console.error('관리자 등록 실패:', error);
+      // 백엔드에서 반환한 오류 메시지를 그대로 반환
+      if (error.response?.data) {
+        return error.response.data;
+      }
+      throw error;
     }
-    throw error;
   }
-};
 
-// 관리자 삭제
-export const deleteAdmin = async (adminId) => {
-  try {
-    const response = await api.delete(`/api/admin/${adminId}`);
-    return response.data;
-  } catch (error) {
-    console.error('관리자 삭제 실패:', error);
-    // 백엔드에서 반환한 오류 메시지를 그대로 반환
-    if (error.response?.data) {
-      return error.response.data;
+  // 관리자 수정
+  async updateAdmin(adminId, adminData) {
+    try {
+      const response = await api.put(`/api/admin/${adminId}`, adminData);
+      return response.data;
+    } catch (error) {
+      console.error('관리자 수정 실패:', error);
+      // 백엔드에서 반환한 오류 메시지를 그대로 반환
+      if (error.response?.data) {
+        return error.response.data;
+      }
+      throw error;
     }
-    throw error;
   }
-};
 
-// 직원 목록 조회 (관리자 등록용)
-export const getEmployeeList = async (params = {}) => {
-  try {
-    const response = await api.get('/api/admin/employee/list', { params });
-    return response.data;
-  } catch (error) {
-    console.error('직원 목록 조회 실패:', error);
-    throw error;
+  // 관리자 삭제
+  async deleteAdmin(adminId) {
+    try {
+      const response = await api.delete(`/api/admin/${adminId}`);
+      return response.data;
+    } catch (error) {
+      console.error('관리자 삭제 실패:', error);
+      // 백엔드에서 반환한 오류 메시지를 그대로 반환
+      if (error.response?.data) {
+        return error.response.data;
+      }
+      throw error;
+    }
   }
-};
 
-// 직원 상세 조회
-export const getEmployeeDetail = async (empId) => {
-  try {
-    const response = await api.get(`/api/employee/${empId}`);
-    return response.data;
-  } catch (error) {
-    console.error('직원 상세 조회 실패:', error);
-    throw error;
+  // 직원 목록 조회 (관리자 등록용)
+  async getEmployeeList(params = {}) {
+    try {
+      const response = await api.get('/api/admin/employee/list', { params });
+      return response.data;
+    } catch (error) {
+      console.error('직원 목록 조회 실패:', error);
+      throw error;
+    }
   }
-};
+
+  // 직원 상세 조회
+  async getEmployeeDetail(empId) {
+    try {
+      const response = await api.get(`/api/employee/${empId}`);
+      return response.data;
+    } catch (error) {
+      console.error('직원 상세 조회 실패:', error);
+      throw error;
+    }
+  }
+}
+
+export default new AdminAPI();

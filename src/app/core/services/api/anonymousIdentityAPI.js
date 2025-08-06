@@ -1,4 +1,4 @@
-import { api } from './apiClient';
+import { api } from '../apiClient';
 
 /**
  * 익명 사용자 동일성 판단 API

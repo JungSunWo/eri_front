@@ -123,7 +123,7 @@ const { mutate } = useMutation("updateUser", userAPI.updateUser, {
 ## 캐시 관리
 
 ```javascript
-import { useQueryStore } from "@/app/core/services/queryStore";
+import { useQueryStore } from "@/app/core/slices/queryStore";
 
 const { invalidateQueries, clearCache } = useQueryStore();
 

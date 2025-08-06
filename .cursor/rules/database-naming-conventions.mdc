@@ -1,0 +1,85 @@
+# Database Naming Conventions
+
+## English Word Abbreviations (Upper Camel Case)
+
+This project uses a specific abbreviation rule where English words are abbreviated to three-letter uppercase acronyms:
+
+### Common Abbreviations:
+
+- `DATE` → `DT` (e.g., `REG_DATE` → `REG_DT`)
+- `FILE_ATTACH` → `FILE_ATT` (e.g., `FILE_ATTACH_YN` → `FILE_ATT_YN`)
+- `BOARD` → `BRD` (e.g., `TB_BOARD` → `TB_BRD`)
+- `CONSULTATION` → `CNSL` (e.g., `TB_CONSULTATION_BOARD` → `TB_CNSL_BRD`)
+- `ANONYMOUS` → `ANON` (e.g., `ANONYMOUS_YN` → `ANON_YN`)
+- `NICKNAME` → `NICK_NM`
+- `ANSWER` → `ANS`
+- `PRIORITY` → `PRI`
+- `URGENT` → `URG`
+- `CATEGORY` → `CAT`
+- `ORIGINAL` → `ORIG`
+- `STORED` → `STOR`
+- `DOWNLOAD` → `DOWN`
+- `IDENTITY` → `ID`
+- `CONFIDENCE` → `CONF`
+- `LEVEL` → `LVL`
+- `JUDGE` → `JUDG`
+- `MEMBER` → `MEMB`
+- `REASON` → `REAS`
+- `NOTICE` → `NOTI`
+- `SECRET` → `SEC`
+- `DISLIKE` → `DISL`
+- `REJECT` → `REJ`
+- `RIGHTS` → `RT`
+- `COMMENT` → `CMT`
+- `PARENT` → `PAR`
+- `DEPTH` → `DEP`
+- `STATUS` → `STS`
+- `MESSAGE` → `MSG`
+- `CONTENT` → `CNTN`
+- `RECOMMEND` → `RCMD`
+- `CHALLENGE` → `CHLG`
+- `ACHIEVEMENT` → `ACHV`
+- `PERFORMANCE` → `PERF`
+- `SCHEDULE` → `SCH`
+- `ASSIGNMENT` → `ASGN`
+- `AVAILABLE` → `AVAIL`
+- `FAMILY` → `FAM`
+- `MENTAL_HEALTH` → `MENTAL_HLTH`
+- `PROFESSIONAL` → `PROF`
+- `GENERAL` → `GEN`
+- `INTERN` → `INT`
+- `COMPLAINT` → `COMPL`
+- `SUGGESTION` → `SUGG`
+- `QUESTION` → `QST`
+- `SYSTEM` → `SYS`
+- `ERROR` → `ERR`
+- `CREATED` → `CRTD`
+- `IMAGE` → `IMG`
+- `SELECT` → `SEL`
+- `ORDER` → `ORD`
+- `TYPE` → `TYP`
+- `SURVEY` → `SURV`
+- `CHOICE` → `CHC`
+- `RESPONSE` → `RESP`
+- `TARGET` → `TGT`
+- `STATISTICS` → `STAT`
+- `DUPLICATE` → `DUPL`
+- `DETAIL` → `DTL`
+- `REQUIRED` → `REQ`
+- `CONDITION` → `COND`
+- `SCORE` → `SCR`
+- `LOGIC` → `LGC` (avoid `LOG` to prevent confusion with logging)
+- `DIARY` → `DRY`
+- `RESULT` → `RES`
+
+### Important Notes:
+
+- Avoid using `LOG` for `LOGIC` to prevent confusion with log entries
+- All abbreviations follow Upper Camel Case format
+- Apply consistently across all DDL files
+- Update index names, comments, and sample data accordingly
+  description:
+  globs:
+  alwaysApply: false
+
+---

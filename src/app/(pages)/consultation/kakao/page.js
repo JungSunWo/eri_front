@@ -1,11 +1,12 @@
 'use client';
 
-import { setMoveTo } from '@/app/core/slices/pageMoveStore';
+import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
 import CmpButton from '@/app/shared/components/button/cmp_button';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
 import { useState } from 'react';
 
 export default function KakaoConsultationPage() {
+  const setMoveTo = usePageMoveStore((state) => state.setMoveTo);
   const [showQRCode, setShowQRCode] = useState(false);
 
   const handleShowQRCode = () => {

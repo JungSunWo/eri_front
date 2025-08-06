@@ -2,7 +2,7 @@
 
 import { systemLogAPI } from '@/app/core/services/api';
 import Board from '@/app/shared/components/Board';
-import { CmpButton } from '@/app/shared/components/button/cmp_button';
+import CmpButton from '@/app/shared/components/button/cmp_button';
 import { CmpNoData } from '@/app/shared/components/etc/cmp_noData';
 import { CmpInput, CmpSelect } from '@/app/shared/components/ui';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';

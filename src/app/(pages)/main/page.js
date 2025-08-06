@@ -11,12 +11,12 @@
 
 'use client';
 
-import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
-import { CmpButton } from '@/app/shared/components/button/cmp_button';
-import ConsultationButton from '@/app/shared/components/ConsultationButton';
+import CmpButton from '@/app/shared/components/button/cmp_button';
+import ConsultationButton from '@/components/ConsultationButton';
+import { usePageMoveStore } from '@/slices/pageMoveStore';
 import { useState } from 'react';
 
-import PageWrapper from '@/app/shared/layouts/PageWrapper';
+import PageWrapper from '@/layouts/PageWrapper';
 
 /**
  * 메인 페이지 컴포넌트
@@ -96,15 +96,15 @@ export default function MainPage() {
    */
   const drawMainContent = () => {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 pb-12">
+      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 pb-12 pt-0 mt-0">
         {/* 메인 타이틀 및 서브타이틀 */}
-        <div className="mb-8">
+        <div className="mb-4">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">{mainData.title}</h1>
           <p className="text-xl text-gray-600">{mainData.subtitle}</p>
         </div>
 
         {/* 상담신청 버튼 */}
-        <div className="mb-8">
+        <div className="mb-4">
           <ConsultationButton
             variant="success"
             size="lg"
@@ -147,7 +147,7 @@ export default function MainPage() {
         </div>
 
         {/* 추가 액션 버튼들 */}
-        <div className="mt-8 flex flex-wrap justify-center gap-4">
+        <div className="mt-4 flex flex-wrap justify-center gap-4">
           <CmpButton
             onClick={handleDashboard}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg"
@@ -166,7 +166,7 @@ export default function MainPage() {
   };
 
   return (
-    <PageWrapper>
+    <PageWrapper showCard={false}>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         {drawMainContent()}
       </div>

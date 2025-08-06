@@ -2,6 +2,7 @@
 
 import { imgBrdAPI } from '@/app/core/services/api/imgBrdAPI';
 import { CmpButton, CmpTextarea, CommonModal } from '@/app/shared/components/ui';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
 import { alert } from '@/app/shared/utils/ui_com';
 import { useEffect, useState } from 'react';
@@ -9,7 +10,6 @@ import { useEffect, useState } from 'react';
 export default function ImgBrdMngPage() {
 
     const [imgFileList, setImgFileList] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState([]);
@@ -25,51 +25,138 @@ export default function ImgBrdMngPage() {
         maxSelCnt: 5
     };
 
-    useEffect(() => {
-        loadImgFileList(defaultBrd.imgBrdSeq);
-    }, []);
-
-    // 이미지 파일 목록 로드
-    const loadImgFileList = async (imgBrdSeq) => {
-        try {
-            setIsLoading(true);
-            const response = await imgBrdAPI.getImgFileList(imgBrdSeq);
-            if (response.success) {
-                setImgFileList(response.data);
-            } else {
-                alert.AlertOpen('오류', '이미지 파일 목록을 불러오는데 실패했습니다.');
-            }
-        } catch (error) {
-            alert.AlertOpen('오류', '이미지 파일 목록을 불러오는 중 오류가 발생했습니다.');
-        } finally {
-            setIsLoading(false);
+    // 이미지 파일 목록 조회 쿼리
+    const {
+        data: imgFileData,
+        isLoading: imgFileLoading,
+        error: imgFileError,
+        refetch: refetchImgFiles
+    } = useQuery(
+        ['img-file-list', defaultBrd.imgBrdSeq],
+        () => imgBrdAPI.getImgFileList(defaultBrd.imgBrdSeq),
+        {
+            cacheTime: 2 * 60 * 1000, // 2분 캐시
+            retry: 3,
+            refetchOnWindowFocus: false
         }
-    };
+    );
+
+    // 이미지 업로드 뮤테이션
+    const {
+        mutate: uploadImagesMutation,
+        isLoading: uploadImagesLoading,
+        error: uploadImagesError
+    } = useMutation(
+        'upload-images',
+        (data) => imgBrdAPI.uploadImages(defaultBrd.imgBrdSeq, data.files, data.texts),
+        {
+            onSuccess: (response) => {
+                if (response.success) {
+                    alert.AlertOpen('성공', `${selectedFiles.length}개 이미지가 업로드되었습니다!`);
+                    setShowUploadModal(false);
+                    setSelectedFiles([]);
+                    setFileTexts([]);
+                    refetchImgFiles();
+                } else {
+                    alert.AlertOpen('오류', response.message || '이미지 업로드에 실패했습니다.');
+                }
+            },
+            onError: (error) => {
+                console.error('이미지 업로드 실패:', error);
+                alert.AlertOpen('오류', '이미지 업로드 중 오류가 발생했습니다.');
+            },
+            invalidateQueries: [['img-file-list']]
+        }
+    );
+
+    // 이미지 텍스트 수정 뮤테이션
+    const {
+        mutate: updateImageTextMutation,
+        isLoading: updateImageTextLoading,
+        error: updateImageTextError
+    } = useMutation(
+        'update-image-text',
+        (data) => imgBrdAPI.updateImageText(data.imgFileSeq, data.text),
+        {
+            onSuccess: (response) => {
+                if (response.success) {
+                    alert.AlertOpen('성공', '이미지 설명이 수정되었습니다.');
+                    setShowEditModal(false);
+                    setEditingFile(null);
+                    setEditText('');
+                    refetchImgFiles();
+                } else {
+                    alert.AlertOpen('오류', response.message || '이미지 수정에 실패했습니다.');
+                }
+            },
+            onError: (error) => {
+                console.error('이미지 수정 실패:', error);
+                alert.AlertOpen('오류', '이미지 수정 중 오류가 발생했습니다.');
+            },
+            invalidateQueries: [['img-file-list']]
+        }
+    );
+
+    // 이미지 삭제 뮤테이션
+    const {
+        mutate: deleteImageMutation,
+        isLoading: deleteImageLoading,
+        error: deleteImageError
+    } = useMutation(
+        'delete-image',
+        (imgFileSeq) => imgBrdAPI.deleteImageFile(imgFileSeq),
+        {
+            onSuccess: (response) => {
+                if (response.success) {
+                    alert.AlertOpen('성공', '이미지가 삭제되었습니다.');
+                    refetchImgFiles();
+                } else {
+                    alert.AlertOpen('오류', response.message || '이미지 삭제에 실패했습니다.');
+                }
+            },
+            onError: (error) => {
+                console.error('이미지 파일 삭제 오류:', error);
+                console.error('에러 상세 정보:', {
+                    status: error.response?.status,
+                    statusText: error.response?.statusText,
+                    data: error.response?.data,
+                    message: error.message
+                });
+
+                // 세션 만료 여부 확인
+                if (error.response?.status === 401) {
+                    alert.AlertOpen('세션 만료', '로그인이 만료되었습니다. 다시 로그인해주세요.');
+                    // 로그인 페이지로 리다이렉트
+                    window.location.href = '/login';
+                    return;
+                }
+
+                alert.AlertOpen('오류', '이미지 삭제 중 오류가 발생했습니다.');
+            },
+            invalidateQueries: [['img-file-list']]
+        }
+    );
+
+    // 데이터 설정
+    useEffect(() => {
+        if (imgFileData?.success) {
+            setImgFileList(imgFileData.data);
+        } else if (imgFileData && !imgFileData.success) {
+            alert.AlertOpen('오류', '이미지 파일 목록을 불러오는데 실패했습니다.');
+        }
+    }, [imgFileData]);
 
     // 이미지 업로드 처리
-    const handleUploadImages = async () => {
+    const handleUploadImages = () => {
         if (selectedFiles.length === 0) {
             alert.AlertOpen('경고', '업로드할 이미지를 선택해주세요.');
             return;
         }
 
-        try {
-            setIsLoading(true);
-            const response = await imgBrdAPI.uploadImages(defaultBrd.imgBrdSeq, selectedFiles, fileTexts);
-            if (response.success) {
-                alert.AlertOpen('성공', `${selectedFiles.length}개 이미지가 업로드되었습니다!`);
-                setShowUploadModal(false);
-                setSelectedFiles([]);
-                setFileTexts([]);
-                loadImgFileList(defaultBrd.imgBrdSeq);
-            } else {
-                alert.AlertOpen('오류', response.message || '이미지 업로드에 실패했습니다.');
-            }
-        } catch (error) {
-            alert.AlertOpen('오류', '이미지 업로드 중 오류가 발생했습니다.');
-        } finally {
-            setIsLoading(false);
-        }
+        uploadImagesMutation({
+            files: selectedFiles,
+            texts: fileTexts
+        });
     };
 
     // 파일 선택 처리
@@ -100,73 +187,52 @@ export default function ImgBrdMngPage() {
     };
 
     // 이미지 수정 처리
-    const handleUpdateImage = async () => {
+    const handleUpdateImage = () => {
         if (!editingFile) return;
 
-        try {
-            setIsLoading(true);
-            const response = await imgBrdAPI.updateImageText(editingFile.imgFileSeq, editText);
-            if (response.success) {
-                alert.AlertOpen('성공', '이미지 설명이 수정되었습니다.');
-                setShowEditModal(false);
-                setEditingFile(null);
-                setEditText('');
-                loadImgFileList(defaultBrd.imgBrdSeq);
-            } else {
-                alert.AlertOpen('오류', response.message || '이미지 수정에 실패했습니다.');
-            }
-        } catch (error) {
-            alert.AlertOpen('오류', '이미지 수정 중 오류가 발생했습니다.');
-        } finally {
-            setIsLoading(false);
-        }
+        updateImageTextMutation({
+            imgFileSeq: editingFile.imgFileSeq,
+            text: editText
+        });
     };
 
     // 이미지 삭제 처리
     const handleDeleteImage = (file) => {
         alert.ConfirmOpen('확인', `"${file.imgFileNm}" 이미지를 삭제하시겠습니까?`, {
-            okCallback: async () => {
-                try {
-                    setIsLoading(true);
+            okCallback: () => {
+                // 세션 상태 확인 (디버깅용)
+                console.log('이미지 삭제 시도:', {
+                    imgFileSeq: file.imgFileSeq,
+                    imgFileNm: file.imgFileNm,
+                    timestamp: new Date().toISOString()
+                });
 
-                    // 세션 상태 확인 (디버깅용)
-                    console.log('이미지 삭제 시도:', {
-                        imgFileSeq: file.imgFileSeq,
-                        imgFileNm: file.imgFileNm,
-                        timestamp: new Date().toISOString()
-                    });
-
-                    const response = await imgBrdAPI.deleteImageFile(file.imgFileSeq);
-                    if (response.success) {
-                        alert.AlertOpen('성공', '이미지가 삭제되었습니다.');
-                        loadImgFileList(defaultBrd.imgBrdSeq);
-                    } else {
-                        alert.AlertOpen('오류', response.message || '이미지 삭제에 실패했습니다.');
-                    }
-                } catch (error) {
-                    console.error('이미지 파일 삭제 오류:', error);
-                    console.error('에러 상세 정보:', {
-                        status: error.response?.status,
-                        statusText: error.response?.statusText,
-                        data: error.response?.data,
-                        message: error.message
-                    });
-
-                    // 세션 만료 여부 확인
-                    if (error.response?.status === 401) {
-                        alert.AlertOpen('세션 만료', '로그인이 만료되었습니다. 다시 로그인해주세요.');
-                        // 로그인 페이지로 리다이렉트
-                        window.location.href = '/login';
-                        return;
-                    }
-
-                    alert.AlertOpen('오류', '이미지 삭제 중 오류가 발생했습니다.');
-                } finally {
-                    setIsLoading(false);
-                }
+                deleteImageMutation(file.imgFileSeq);
             }
         });
     };
+
+    // 에러 메시지 생성 함수
+    const getErrorMessage = (error) => {
+        if (!error) return '';
+
+        if (typeof error === 'string') {
+            return error;
+        }
+
+        if (error.type === 'response') {
+            return `서버 오류 (${error.status}): ${error.message}`;
+        } else if (error.type === 'network') {
+            return '네트워크 연결 오류가 발생했습니다.';
+        } else if (error.type === 'request') {
+            return `요청 오류: ${error.message}`;
+        }
+
+        return error.message || '알 수 없는 오류가 발생했습니다.';
+    };
+
+    // 로딩 상태 통합
+    const loading = imgFileLoading || uploadImagesLoading || updateImageTextLoading || deleteImageLoading;
 
     return (
         <PageWrapper
@@ -174,6 +240,19 @@ export default function ImgBrdMngPage() {
             subtitle="이미지를 업로드하고 관리할 수 있습니다."
             showCard={true}
         >
+            {/* 에러 메시지 표시 */}
+            {(imgFileError || uploadImagesError || updateImageTextError || deleteImageError) && (
+                <div className="mb-6 p-4 bg-red-50 rounded border border-red-200">
+                    <div className="font-medium text-red-800 mb-1">오류가 발생했습니다:</div>
+                    <div className="text-sm text-red-600">
+                        {imgFileError && <div>이미지 목록 조회: {getErrorMessage(imgFileError)}</div>}
+                        {uploadImagesError && <div>이미지 업로드: {getErrorMessage(uploadImagesError)}</div>}
+                        {updateImageTextError && <div>이미지 수정: {getErrorMessage(updateImageTextError)}</div>}
+                        {deleteImageError && <div>이미지 삭제: {getErrorMessage(deleteImageError)}</div>}
+                    </div>
+                </div>
+            )}
+
             <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-bold">심리훈련 이미지 관리</h1>
@@ -181,6 +260,7 @@ export default function ImgBrdMngPage() {
                         variant="success"
                         size="md"
                         onClick={() => setShowUploadModal(true)}
+                        disabled={loading}
                     >
                         이미지 업로드
                     </CmpButton>
@@ -224,7 +304,7 @@ export default function ImgBrdMngPage() {
                 {/* 이미지 목록 */}
                 <div className="bg-white rounded-lg shadow p-4">
                     <h2 className="text-lg font-semibold mb-4">업로드된 이미지 목록</h2>
-                    {isLoading ? (
+                    {imgFileLoading ? (
                         <div className="text-center py-4">로딩 중...</div>
                     ) : imgFileList.length === 0 ? (
                         <div className="text-center py-8 text-gray-500">
@@ -260,6 +340,7 @@ export default function ImgBrdMngPage() {
                                                 variant="primary"
                                                 size="sm"
                                                 onClick={() => handleEditImage(file)}
+                                                disabled={loading}
                                             >
                                                 수정
                                             </CmpButton>
@@ -267,6 +348,7 @@ export default function ImgBrdMngPage() {
                                                 variant="danger"
                                                 size="sm"
                                                 onClick={() => handleDeleteImage(file)}
+                                                disabled={loading}
                                             >
                                                 삭제
                                             </CmpButton>
@@ -300,6 +382,7 @@ export default function ImgBrdMngPage() {
                         accept="image/*"
                         onChange={handleFileSelect}
                         className="w-full p-2 border border-gray-300 rounded-lg"
+                        disabled={loading}
                     />
                     <p className="text-xs text-gray-500 mt-1">
                         여러 이미지를 선택할 수 있습니다.
@@ -320,6 +403,7 @@ export default function ImgBrdMngPage() {
                                         value={fileTexts[index] || ''}
                                         onChange={(e) => handleTextChange(index, e.target.value)}
                                         rows="2"
+                                        disabled={loading}
                                     />
                                 </div>
                             ))}
@@ -335,15 +419,16 @@ export default function ImgBrdMngPage() {
                             setSelectedFiles([]);
                             setFileTexts([]);
                         }}
+                        disabled={loading}
                     >
                         취소
                     </CmpButton>
                     <CmpButton
                         variant="primary"
                         onClick={handleUploadImages}
-                        disabled={selectedFiles.length === 0 || isLoading}
+                        disabled={selectedFiles.length === 0 || loading}
                     >
-                        {isLoading ? '업로드 중...' : '업로드'}
+                        {uploadImagesLoading ? '업로드 중...' : '업로드'}
                     </CmpButton>
                 </div>
             </CommonModal>
@@ -382,6 +467,7 @@ export default function ImgBrdMngPage() {
                                     onChange={(e) => setEditText(e.target.value)}
                                     placeholder="이미지에 대한 설명을 입력하세요"
                                     rows="3"
+                                    disabled={loading}
                                 />
                             </div>
                         </div>
@@ -394,15 +480,16 @@ export default function ImgBrdMngPage() {
                                     setEditingFile(null);
                                     setEditText('');
                                 }}
+                                disabled={loading}
                             >
                                 취소
                             </CmpButton>
                             <CmpButton
                                 variant="primary"
                                 onClick={handleUpdateImage}
-                                disabled={isLoading}
+                                disabled={loading}
                             >
-                                {isLoading ? '수정 중...' : '수정'}
+                                {updateImageTextLoading ? '수정 중...' : '수정'}
                             </CmpButton>
                         </div>
                     </>

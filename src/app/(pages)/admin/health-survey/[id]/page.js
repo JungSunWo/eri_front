@@ -3,19 +3,20 @@
 import { surveyAPI } from '@/app/core/services/api';
 import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
 import { CmpButton } from '@/app/shared/components/ui';
+import { useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
 import { toast } from '@/app/shared/utils/ui_com';
 import {
-    AlertCircle,
-    ArrowLeft,
-    BarChart3,
-    Calendar,
-    CheckCircle,
-    Clock,
-    Edit,
-    FileText,
-    Users,
-    XCircle
+  AlertCircle,
+  ArrowLeft,
+  BarChart3,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Edit,
+  FileText,
+  Users,
+  XCircle
 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -28,33 +29,36 @@ export default function SurveyDetailPage() {
   // 상태 관리
   const [survey, setSurvey] = useState(null);
   const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  // 설문조사 상세 조회
-  const loadSurveyDetail = async () => {
-    setLoading(true);
-    try {
-      console.log('설문조사 상세 조회 시작: surveySeq =', surveySeq);
-      const response = await surveyAPI.getSurveyDetail(surveySeq);
-      console.log('설문조사 상세 조회 응답:', response);
+  // 설문조사 상세 조회 쿼리
+  const {
+    data: surveyData,
+    isLoading: surveyLoading,
+    error: surveyError,
+    refetch: refetchSurvey
+  } = useQuery(
+    ['survey-detail', surveySeq],
+    () => surveyAPI.getSurveyDetail(surveySeq),
+    {
+      cacheTime: 5 * 60 * 1000, // 5분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+      enabled: !!surveySeq
+    }
+  );
 
-      if (response.success) {
-        setSurvey(response.data);
-        setQuestions(response.data.questions || []);
-        console.log('설문조사 데이터 설정 완료:', response.data);
-      } else {
-        console.error('설문조사 상세 조회 실패:', response.message);
-        toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
-        setMoveTo('/admin/health-survey');
-      }
-    } catch (error) {
-      console.error('설문조사 상세 조회 오류:', error);
+  // 데이터 설정
+  useEffect(() => {
+    if (surveyData?.success) {
+      setSurvey(surveyData.data);
+      setQuestions(surveyData.data.questions || []);
+      console.log('설문조사 데이터 설정 완료:', surveyData.data);
+    } else if (surveyData && !surveyData.success) {
+      console.error('설문조사 상세 조회 실패:', surveyData.message);
       toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
       setMoveTo('/admin/health-survey');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [surveyData, setMoveTo]);
 
   // 설문조사 수정
   const editSurvey = () => {
@@ -69,6 +73,25 @@ export default function SurveyDetailPage() {
   // 뒤로가기
   const goBack = () => {
     setMoveTo('/admin/health-survey');
+  };
+
+  // 에러 메시지 생성 함수
+  const getErrorMessage = (error) => {
+    if (!error) return '';
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    if (error.type === 'response') {
+      return `서버 오류 (${error.status}): ${error.message}`;
+    } else if (error.type === 'network') {
+      return '네트워크 연결 오류가 발생했습니다.';
+    } else if (error.type === 'request') {
+      return `요청 오류: ${error.message}`;
+    }
+
+    return error.message || '알 수 없는 오류가 발생했습니다.';
   };
 
   // 상태 아이콘 반환
@@ -130,18 +153,36 @@ export default function SurveyDetailPage() {
     return statusMap[status] || status;
   };
 
-  useEffect(() => {
-    if (surveySeq) {
-      loadSurveyDetail();
-    }
-  }, [surveySeq]);
-
-  if (loading) {
+  if (surveyLoading) {
     return (
       <PageWrapper>
         <div className="flex items-center justify-center min-h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <p className="ml-2 text-gray-600">로딩 중...</p>
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  if (surveyError) {
+    return (
+      <PageWrapper>
+        <div className="mb-6 p-4 bg-red-50 rounded border border-red-200">
+          <div className="font-medium text-red-800 mb-1">오류가 발생했습니다:</div>
+          <div className="text-sm text-red-600">
+            설문조사 상세 조회: {getErrorMessage(surveyError)}
+          </div>
+        </div>
+        <div className="text-center py-8">
+          <p className="text-gray-500">설문조사를 불러오는데 실패했습니다.</p>
+          <CmpButton
+            onClick={goBack}
+            variant="primary"
+            size="md"
+            className="mt-4"
+          >
+            목록으로 돌아가기
+          </CmpButton>
         </div>
       </PageWrapper>
     );
@@ -175,6 +216,7 @@ export default function SurveyDetailPage() {
               onClick={goBack}
               variant="text"
               size="md"
+              disabled={surveyLoading}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               뒤로가기
@@ -189,6 +231,7 @@ export default function SurveyDetailPage() {
               onClick={editSurvey}
               variant="success"
               size="md"
+              disabled={surveyLoading}
             >
               <Edit className="w-4 h-4 mr-2" />
               수정
@@ -197,6 +240,7 @@ export default function SurveyDetailPage() {
               onClick={viewResults}
               variant="info"
               size="md"
+              disabled={surveyLoading}
             >
               <BarChart3 className="w-4 h-4 mr-2" />
               결과보기

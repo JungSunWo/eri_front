@@ -1,0 +1,74 @@
+# Expert Consultation System
+
+## Database Schema
+
+The expert consultation system uses these tables in [ERI/database/ERI_DDL_PostgreSQL.sql](mdc:ERI/database/ERI_DDL_PostgreSQL.sql):
+
+### Core Tables
+
+- `TB_EXP_CNSL_APP`: Expert consultation applications
+- `TB_EXP_CNSL_DRY`: Consultation diaries/logs
+- `TB_CNSLR_SCHEDULE`: Counselor schedules
+- `TB_CNSL_ASSIGNMENT`: Counselor assignments
+- `TB_CNSL_TIME_LIMIT`: Time slot limits
+- `TB_CNSLR_INFO`: Counselor information
+
+### Key Features
+
+- Date/time-based consultation scheduling
+- 3-session limit per time slot
+- Counselor assignment management
+- Consultation diary/logging
+- Anonymous consultation support
+
+## Frontend Components
+
+The expert consultation frontend is in [eoc_front/src/app/(pages)/consultation/expert/page.js](<mdc:eoc_front/src/app/(pages)/consultation/expert/page.js>):
+
+### Layout Structure
+
+- Left sidebar with process flow
+- Main content area with STEP sections
+- Calendar and time selection
+- File attachment functionality
+
+### Key Features
+
+- Date selection with calendar component
+- Time slot selection with 2-column layout
+- Anonymous consultation option
+- File upload capability
+- Step-by-step process flow
+
+### State Management
+
+- `selectedDate`: Currently selected date
+- `selectedTime`: Currently selected time slot
+- `formData`: Form data including anonymous flag, description, attachments
+- `calendarEvents`: Available dates for consultation
+
+### Styling
+
+- Uses Tailwind CSS for responsive design
+- Rounded buttons and checkboxes
+- Blue/green color scheme
+- Proper spacing and alignment
+
+## Integration Points
+
+- Connects to counselor management system
+- Integrates with file attachment system
+- Links to employee authentication
+- Supports Korean locale formatting
+
+## Development Notes
+
+- Follow the established naming conventions
+- Maintain responsive design patterns
+- Implement proper form validation
+- Use consistent styling approach
+  description:
+  globs:
+  alwaysApply: false
+
+---

@@ -9,7 +9,7 @@
  **/
 
 // 공통 API 클라이언트 및 유틸리티
-export { api, apiCall, api as apiClient, serverApi } from './api/apiClient';
+export { api, apiCall, api as apiClient, serverApi } from './apiClient';
 
 // 인증 관련 API
 export { authAPI } from './api/authAPI';
@@ -39,12 +39,10 @@ export { consultationAPI } from './api/consultationAPI';
 export { authManagementAPI, permissionAPI } from './api/authManagementAPI';
 
 // 관리자 관련 API
-export {
-    createAdmin, deleteAdmin, getAdminList, getEmployeeDetail, getEmployeeList, updateAdmin
-} from './api/adminAPI';
+export { default as adminAPI } from './api/adminAPI';
 
 // 시스템 로그 관련 API
 export { systemLogAPI } from './api/systemLogAPI';
 
 // 기본 export (기존 코드 호환성)
-export { api as default } from './api/apiClient';
+export { api as default } from './apiClient';

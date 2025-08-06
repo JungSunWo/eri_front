@@ -1,9 +1,9 @@
 'use client';
 
-import { authAPI } from '@/app/core/services/api';
-import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
+import { authAPI } from '@/services/api';
+import { usePageMoveStore } from '@/slices/pageMoveStore';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 // 전역 플래그로 뒤로가기/새로고침 실행 상태 관리
 let globalIsGoingBack = false;
@@ -20,12 +20,14 @@ export default function PageMove() {
   const goBack = usePageMoveStore((state) => state.goBack);
   const resetGoBack = usePageMoveStore((state) => state.resetGoBack);
 
+  console.log('PageMove 렌더링:', { pathname, moveTo, refresh, goBack, isLoginPage });
+
   // 로컬 ref들
   const isGoingBack = useRef(false);
   const isRefreshing = useRef(false);
 
-  // useCallback으로 함수들을 메모이제이션
-  const handleMoveTo = useCallback(() => {
+  useEffect(() => {
+    console.log('PageMove - moveTo useEffect 실행:', { moveTo });
     if (!moveTo) return;
     if (moveTo === '/login') {
       router.replace(moveTo);
@@ -33,9 +35,16 @@ export default function PageMove() {
       router.push(moveTo);
     }
     resetMoveTo();
-  }, [moveTo, router, resetMoveTo]);
+  }, [moveTo, router]);
 
-  const handleRefresh = useCallback(() => {
+  useEffect(() => {
+    console.log('PageMove - refresh useEffect 실행:', {
+      refresh,
+      globalIsRefreshing,
+      isRefreshing: isRefreshing.current,
+      timestamp: new Date().toISOString()
+    });
+
     // 전역 플래그와 로컬 플래그 모두 체크
     if (refresh && !globalIsRefreshing && !isRefreshing.current) {
       // 모든 플래그 설정
@@ -52,9 +61,9 @@ export default function PageMove() {
 
       // 플래그 리셋은 새로고침으로 인해 페이지가 다시 로드되므로 불필요
     }
-  }, [refresh, resetRefresh]);
+  }, [refresh]);
 
-  const handleGoBack = useCallback(() => {
+  useEffect(() => {
     // 전역 플래그와 로컬 플래그 모두 체크
     if (goBack && !globalIsGoingBack && !isGoingBack.current) {
       // 모든 플래그 설정
@@ -76,19 +85,7 @@ export default function PageMove() {
         console.log('뒤로가기 플래그 리셋:', new Date().toISOString());
       }, 500);
     }
-  }, [goBack, router, resetGoBack]);
-
-  useEffect(() => {
-    handleMoveTo();
-  }, [handleMoveTo]);
-
-  useEffect(() => {
-    handleRefresh();
-  }, [handleRefresh]);
-
-  useEffect(() => {
-    handleGoBack();
-  }, [handleGoBack]);
+  }, [goBack, router]);
 
   // 페이지 이동 시 로그인 상태 확인
   useEffect(() => {

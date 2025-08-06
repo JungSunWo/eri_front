@@ -1,5 +1,6 @@
 'use client';
 
+import { useMenuStore } from '@/slices/menuStore';
 import styled from 'styled-components';
 
 // Styled components
@@ -12,8 +13,14 @@ const PageContainer = styled.div`
 
 const MainContent = styled.div`
   flex: 1;
-  padding: 2rem 0;
-  margin-top: var(--header-height); /* 헤더 높이만큼 상단 여백 추가 */
+  padding: 0;
+  margin-top: 0; /* 상단 여백 제거 */
+  transition: margin-top 0.3s ease; /* 부드러운 전환 효과 */
+
+  /* 메뉴가 활성화되었을 때만 추가 여백 */
+  &.menu-active {
+    margin-top: 100px;
+  }
 `;
 
 const Container = styled.div`
@@ -63,10 +70,18 @@ const PageLayout = ({
   headerClassName = '',
   bodyClassName = ''
 }) => {
+  // 메뉴 상태 감지
+  const activeMenus = useMenuStore((state) => state.activeMenus);
+  const isMenuActive = activeMenus && activeMenus.length > 0;
+
+  // 디버깅을 위한 로그
+  console.log('PageLayout - activeMenus:', activeMenus);
+  console.log('PageLayout - isMenuActive:', isMenuActive);
+
   if (!showCard) {
     return (
       <PageContainer className={className}>
-        <MainContent>
+        <MainContent className={isMenuActive ? 'menu-active' : ''}>
           <Container>
             {children}
           </Container>
@@ -77,7 +92,7 @@ const PageLayout = ({
 
   return (
     <PageContainer className={className}>
-      <MainContent>
+      <MainContent className={isMenuActive ? 'menu-active' : ''}>
         <Container>
           <Card>
             <CardHeader className={headerClassName}>

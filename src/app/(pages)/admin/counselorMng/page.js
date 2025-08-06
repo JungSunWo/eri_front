@@ -1,7 +1,8 @@
 'use client';
 
-import { createCounselor, deleteCounselor, getCounselorList, getEmployeeList, updateCounselor } from '@/app/core/services/api/counselorAPI';
+import counselorAPI from '@/app/core/services/api/counselorAPI';
 import Board from '@/app/shared/components/Board';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
 import { alert, toast } from '@/app/shared/utils/ui_com';
 import { useEffect, useState } from 'react';
@@ -10,7 +11,6 @@ export default function CounselorManagementPage() {
   const [employees, setEmployees] = useState([]);
   const [counselors, setCounselors] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [counselorSearchKeyword, setCounselorSearchKeyword] = useState(''); // 상담사 검색 키워드
   const [counselorInfoClsf, setCounselorInfoClsf] = useState('PROFESSIONAL'); // 상담자정보구분코드
@@ -31,104 +31,211 @@ export default function CounselorManagementPage() {
   const [counselorSortKey, setCounselorSortKey] = useState('');
   const [counselorSortOrder, setCounselorSortOrder] = useState('asc');
 
-  // 직원 목록 조회
-  const fetchEmployees = async (page = 1, sortKey = '', sortOrder = 'asc') => {
-    try {
-      setLoading(true);
-      const params = {
-        keyword: searchKeyword,
-        page: page,
-        size: 10, // 페이지당 10개씩
-        sortBy: sortKey || undefined,
-        sortDirection: sortKey ? sortOrder : undefined
-      };
-      const response = await getEmployeeList(params);
-      if (response.success) {
-        const data = response.data;
-        setEmployees(data.content || data || []);
-        setEmployeeTotalPages(data.totalPages || 1);
-        setEmployeeTotalElements(data.totalElements || 0);
-        setEmployeePage(page);
-      } else {
-        toast.callCommonToastOpen(response.message || '직원 목록 조회에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('직원 목록 조회 실패:', error);
-      toast.callCommonToastOpen('직원 목록 조회 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+  // 직원 목록 조회 쿼리 파라미터
+  const employeeQueryParams = {
+    keyword: searchKeyword,
+    page: employeePage,
+    size: 10,
+    sortBy: employeeSortKey || undefined,
+    sortDirection: employeeSortKey ? employeeSortOrder : undefined
   };
 
-  // 상담사 목록 조회
-  const fetchCounselors = async (page = 1, sortKey = '', sortOrder = 'asc') => {
-    try {
-      setLoading(true);
-      const params = {
-        keyword: counselorSearchKeyword, // 상담사 검색 키워드 추가
-        page: page,
-        size: 5, // 페이지당 5개씩
-        sortBy: sortKey || undefined,
-        sortDirection: sortKey ? sortOrder : undefined
-      };
-      const response = await getCounselorList(params);
-      if (response.success) {
-        const data = response.data;
-        setCounselors(data.content || data || []);
-        setCounselorTotalPages(data.totalPages || 1);
-        setCounselorTotalElements(data.totalElements || 0);
-        setCounselorPage(page);
-      } else {
-        toast.callCommonToastOpen(response.message || '상담사 목록 조회에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('상담사 목록 조회 실패:', error);
-      toast.callCommonToastOpen('상담사 목록 조회 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+  // 상담사 목록 조회 쿼리 파라미터
+  const counselorQueryParams = {
+    keyword: counselorSearchKeyword,
+    page: counselorPage,
+    size: 5,
+    sortBy: counselorSortKey || undefined,
+    sortDirection: counselorSortKey ? counselorSortOrder : undefined
   };
 
-  // 페이지 로드 시 데이터 조회
+  // 직원 목록 조회 (Zustand Query 사용)
+  const {
+    data: employeeData,
+    isLoading: employeeLoading,
+    error: employeeError,
+    refetch: refetchEmployees
+  } = useQuery(
+    ['employee-list', employeeQueryParams],
+    () => counselorAPI.getEmployeeList(employeeQueryParams),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // 상담사 목록 조회 (Zustand Query 사용)
+  const {
+    data: counselorData,
+    isLoading: counselorLoading,
+    error: counselorError,
+    refetch: refetchCounselors
+  } = useQuery(
+    ['counselor-list', counselorQueryParams],
+    () => counselorAPI.getCounselorList(counselorQueryParams),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // 상담사 생성 뮤테이션
+  const {
+    mutate: createCounselorMutation,
+    isLoading: createCounselorLoading,
+    error: createCounselorError
+  } = useMutation(
+    'create-counselor',
+    (counselorData) => counselorAPI.createCounselor(counselorData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('상담사가 성공적으로 등록되었습니다.');
+          // 폼 초기화
+          setSelectedEmployee(null);
+          setCounselorInfoClsf('PROFESSIONAL');
+          // 목록 새로고침
+          refetchEmployees();
+          refetchCounselors();
+        } else {
+          toast.callCommonToastOpen(response.message || '상담사 등록에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('상담사 등록 실패:', error);
+        toast.callCommonToastOpen('상담사 등록 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['employee-list'], ['counselor-list']]
+    }
+  );
+
+  // 상담사 수정 뮤테이션
+  const {
+    mutate: updateCounselorMutation,
+    isLoading: updateCounselorLoading,
+    error: updateCounselorError
+  } = useMutation(
+    'update-counselor',
+    ({ counselorEmpId, counselorData }) => counselorAPI.updateCounselor(counselorEmpId, counselorData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('상담사 정보가 성공적으로 수정되었습니다.');
+          setEditingCounselor(null);
+          setEditingCounselorInfoClsf('PROFESSIONAL');
+          refetchCounselors(); // 목록 새로고침
+        } else {
+          toast.callCommonToastOpen(response.message || '상담사 수정에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('상담사 수정 실패:', error);
+        toast.callCommonToastOpen('상담사 수정 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['counselor-list']]
+    }
+  );
+
+  // 상담사 삭제 뮤테이션
+  const {
+    mutate: deleteCounselorMutation,
+    isLoading: deleteCounselorLoading,
+    error: deleteCounselorError
+  } = useMutation(
+    'delete-counselor',
+    (counselorEmpId) => counselorAPI.deleteCounselor(counselorEmpId),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('상담사가 성공적으로 삭제되었습니다.');
+          refetchCounselors(); // 목록 새로고침
+        } else {
+          toast.callCommonToastOpen(response.message || '상담사 삭제에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('상담사 삭제 실패:', error);
+        toast.callCommonToastOpen('상담사 삭제 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['counselor-list']]
+    }
+  );
+
+  // 데이터 설정
   useEffect(() => {
-    fetchEmployees();
-    fetchCounselors();
-  }, []);
+    if (employeeData?.success) {
+      const data = employeeData.data;
+      setEmployees(data.content || data || []);
+      setEmployeeTotalPages(data.totalPages || 1);
+      setEmployeeTotalElements(data.totalElements || 0);
+    }
+  }, [employeeData]);
+
+  useEffect(() => {
+    if (counselorData?.success) {
+      const data = counselorData.data;
+      setCounselors(data.content || data || []);
+      setCounselorTotalPages(data.totalPages || 1);
+      setCounselorTotalElements(data.totalElements || 0);
+    }
+  }, [counselorData]);
+
+  // 로딩 상태 통합
+  const loading = employeeLoading || counselorLoading || createCounselorLoading || updateCounselorLoading || deleteCounselorLoading;
+
+  // 에러 메시지 생성 함수
+  const getErrorMessage = (error) => {
+    if (!error) return '';
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    if (error.type === 'response') {
+      return `서버 오류 (${error.status}): ${error.message}`;
+    } else if (error.type === 'network') {
+      return '네트워크 연결 오류가 발생했습니다.';
+    } else if (error.type === 'request') {
+      return `요청 오류: ${error.message}`;
+    }
+
+    return error.message || '알 수 없는 오류가 발생했습니다.';
+  };
 
   // 직원 검색 실행
   const handleSearch = () => {
     setEmployeePage(1); // 검색 시 첫 페이지로
-    fetchEmployees(1, employeeSortKey, employeeSortOrder);
   };
 
   // 상담사 검색 실행
   const handleCounselorSearch = () => {
     setCounselorPage(1); // 검색 시 첫 페이지로
-    fetchCounselors(1, counselorSortKey, counselorSortOrder);
   };
 
   // 직원 목록 페이징 처리
   const handleEmployeePageChange = (page) => {
-    fetchEmployees(page, employeeSortKey, employeeSortOrder);
+    setEmployeePage(page);
   };
 
   // 직원 목록 정렬 처리
   const handleEmployeeSortChange = (key, order) => {
     setEmployeeSortKey(key);
     setEmployeeSortOrder(order);
-    fetchEmployees(employeePage, key, order);
+    setEmployeePage(1);
   };
 
   // 상담사 목록 페이징 처리
   const handleCounselorPageChange = (page) => {
-    fetchCounselors(page, counselorSortKey, counselorSortOrder);
+    setCounselorPage(page);
   };
 
   // 상담사 목록 정렬 처리
   const handleCounselorSortChange = (key, order) => {
     setCounselorSortKey(key);
     setCounselorSortOrder(order);
-    fetchCounselors(counselorPage, key, order);
+    setCounselorPage(1);
   };
 
   // 직원 선택
@@ -137,45 +244,26 @@ export default function CounselorManagementPage() {
   };
 
   // 상담사 등록
-  const handleCounselorRegister = async () => {
+  const handleCounselorRegister = () => {
     if (!selectedEmployee) {
       toast.callCommonToastOpen('등록할 직원을 선택해주세요.');
       return;
     }
 
-    try {
-      setLoading(true);
-      const counselorData = {
-        counselorEmpId: selectedEmployee.eriEmpId, // ERI직원번호로 저장
-        eriEmpId: selectedEmployee.eriEmpId,
-        counselorInfoClsfCd: counselorInfoClsf
-        // regEmpId는 백엔드에서 세션의 EMP_ID를 사용
-      };
+    const counselorData = {
+      empId: selectedEmployee.eriEmpId, // ERI직원번호로 저장
+      eriEmpId: selectedEmployee.eriEmpId,
+      counselorInfoClsf: counselorInfoClsf
+      // regEmpId는 백엔드에서 세션의 EMP_ID를 사용
+    };
 
-      const response = await createCounselor(counselorData);
-      if (response.success) {
-        toast.callCommonToastOpen('상담사가 성공적으로 등록되었습니다.');
-        // 폼 초기화
-        setSelectedEmployee(null);
-        setCounselorInfoClsf('PROFESSIONAL');
-        // 목록 새로고침
-        fetchEmployees(employeePage, employeeSortKey, employeeSortOrder);
-        fetchCounselors(counselorPage, counselorSortKey, counselorSortOrder);
-      } else {
-        toast.callCommonToastOpen(response.message || '상담사 등록에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('상담사 등록 실패:', error);
-      toast.callCommonToastOpen('상담사 등록 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+    createCounselorMutation(counselorData);
   };
 
   // 상담사 수정 모드 시작
   const handleEditStart = (counselor) => {
     setEditingCounselor(counselor);
-    setEditingCounselorInfoClsf(counselor.counselorInfoClsfCd || 'PROFESSIONAL');
+    setEditingCounselorInfoClsf(counselor.counselorInfoClsf || 'PROFESSIONAL');
   };
 
   // 상담사 수정 모드 취소
@@ -185,55 +273,25 @@ export default function CounselorManagementPage() {
   };
 
   // 상담사 수정
-  const handleCounselorUpdate = async () => {
+  const handleCounselorUpdate = () => {
     if (!editingCounselor) return;
 
-    try {
-      setLoading(true);
-      const counselorData = {
-        counselorInfoClsfCd: editingCounselorInfoClsf
-        // updEmpId는 백엔드에서 세션의 EMP_ID를 사용
-      };
+    const counselorData = {
+      counselorInfoClsf: editingCounselorInfoClsf
+      // updEmpId는 백엔드에서 세션의 EMP_ID를 사용
+    };
 
-      const response = await updateCounselor(editingCounselor.counselorEmpId, counselorData);
-      if (response.success) {
-        toast.callCommonToastOpen('상담사 정보가 성공적으로 수정되었습니다.');
-        setEditingCounselor(null);
-        setEditingCounselorInfoClsf('PROFESSIONAL');
-        fetchCounselors(counselorPage, counselorSortKey, counselorSortOrder); // 목록 새로고침
-      } else {
-        toast.callCommonToastOpen(response.message || '상담사 수정에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('상담사 수정 실패:', error);
-      toast.callCommonToastOpen('상담사 수정 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+    updateCounselorMutation({ counselorEmpId: editingCounselor.counselorEmpId, counselorData });
   };
 
   // 상담사 삭제
-  const handleCounselorDelete = async (counselorEmpId) => {
+  const handleCounselorDelete = (counselorEmpId) => {
     // 공통 confirm 사용
     alert.ConfirmOpen('상담사 삭제', '정말로 이 상담사를 삭제하시겠습니까?', {
       okLabel: '삭제',
       cancelLabel: '취소',
-      okCallback: async () => {
-        try {
-          setLoading(true);
-          const response = await deleteCounselor(counselorEmpId);
-          if (response.success) {
-            toast.callCommonToastOpen('상담사가 성공적으로 삭제되었습니다.');
-            fetchCounselors(counselorPage, counselorSortKey, counselorSortOrder); // 목록 새로고침
-          } else {
-            toast.callCommonToastOpen(response.message || '상담사 삭제에 실패했습니다.');
-          }
-        } catch (error) {
-          console.error('상담사 삭제 실패:', error);
-          toast.callCommonToastOpen('상담사 삭제 중 오류가 발생했습니다.');
-        } finally {
-          setLoading(false);
-        }
+      okCallback: () => {
+        deleteCounselorMutation(counselorEmpId);
       }
     });
   };

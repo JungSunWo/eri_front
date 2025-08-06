@@ -99,30 +99,21 @@ const CmpButton = (props) => {
 
     return (
         <StyledComponent
-            // 링크 속성 (href가 있을 때만 적용)
-            href={href}
-
-            // 스타일 속성 (data-* 속성으로 CSS에서 스타일 적용)
-            data-styletype={styleType}  // 스타일 타입 (primary, secondary 등)
-            data-size={size}            // 버튼 크기 (h32, h40, h48 등)
-            {...ConvertToDataAttributes(customStyle)}  // 커스텀 스타일을 data-* 속성으로 변환
-
-            // 이벤트 핸들러
-            onClick={click}
-
-            // 제어 속성
-            disabled={disabled}         // 비활성화 상태
-            id={id}                     // 버튼 ID
-            name={name}                 // 버튼 name
-            {...(isButton ? { type: type || 'button' } : {})}  // 버튼일 때만 type 속성 적용
-            className={props.className} // 추가 CSS 클래스
+            {...(isButton ? { type } : {})}
+            {...(isButton ? { disabled } : {})}
+            {...(href ? { href } : {})}
+            {...(click ? { onClick: click } : {})}
+            {...(id ? { id } : {})}
+            {...(name ? { name } : {})}
+            data-styletype={styleType}
+            data-size={size}
+            {...ConvertToDataAttributes(customStyle)}
+            className={props.className}
+            suppressHydrationWarning={true}
         >
-            {/* 버튼 텍스트 (HTML 태그 지원) */}
-            <span className={`${spanClassName ? spanClassName : "base"}`}>
+            <span className={spanClassName || "base"}>
                 {formattedLabel}
             </span>
-
-            {/* 아이콘이 추가로 필요한경우 (우측에 표시) */}
             {iconName && <span className={iconName}></span>}
         </StyledComponent>
     );
@@ -135,4 +126,5 @@ const CmpButton = (props) => {
  * - StyledButton: 버튼 스타일 컴포넌트 (직접 사용 가능)
  * - StyledLink: 링크 스타일 컴포넌트 (직접 사용 가능)
  */
-export { ButtonGroup, CmpButton, StyledButton, StyledLink };
+export { ButtonGroup, StyledButton, StyledLink };
+export default CmpButton;

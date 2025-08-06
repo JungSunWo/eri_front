@@ -2,46 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-
-
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-  --header-height: 80px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+  --header-height: 30px;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  /* background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb)); */
-  background-color: #f8f6ff;
-  /* 연보라 파스텔톤 */
-  min-width: 1000px;
+  padding-top: 0;
+  margin: 0;
 }
 
-html {
-  min-width: 1000px;
+/* 헤더가 고정되어 있을 때 메인 컨텐츠가 가려지지 않도록 설정 */
+main {
+  margin-top: 0;
+  padding-top: 0;
 }
 
-#__next {
-  min-width: 1000px;
+/* 메뉴가 활성화되었을 때 추가 여백 */
+.menu-active {
+  margin-top: 200px;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* 페이지 컨테이너 여백 제거 */
+.page-container {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* 추가 여백 제거 */
+* {
+  box-sizing: border-box;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
 }

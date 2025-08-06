@@ -1,6 +1,6 @@
 'use client';
 
-import { CmpButton } from '../button/cmp_button';
+import CmpButton from '../button/cmp_button';
 import { CmpNoData } from '../etc/cmp_noData';
 
 const DataTable = ({

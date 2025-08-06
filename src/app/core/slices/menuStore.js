@@ -16,15 +16,26 @@ import { create } from 'zustand';
  *
  * @type {Object} 메뉴 스토어 객체
  * @property {Array} activeMenus - 현재 활성화된 메뉴 목록
+ * @property {number|null} activeMenu - 현재 활성화된 메뉴 인덱스
  * @property {Function} setActiveMenus - 활성 메뉴 목록 설정 함수
+ * @property {Function} setActiveMenu - 활성 메뉴 인덱스 설정 함수
  */
 export const useMenuStore = create((set) => ({
   // 현재 활성화된 메뉴 목록
   activeMenus: [],
+
+  // 현재 활성화된 메뉴 인덱스
+  activeMenu: null,
 
   /**
    * 활성 메뉴 목록 설정
    * @param {Array} menus - 설정할 메뉴 목록
    */
   setActiveMenus: (menus) => set({ activeMenus: menus }),
+
+  /**
+   * 활성 메뉴 인덱스 설정
+   * @param {number|null} index - 설정할 메뉴 인덱스
+   */
+  setActiveMenu: (index) => set({ activeMenu: index }),
 }));

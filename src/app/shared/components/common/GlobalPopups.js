@@ -1,6 +1,6 @@
 'use client'
-import { CmpWrapAlertArea, CmpWrapCommonAlertArea, CmpWrapErrorAlertArea } from '@/app/shared/components/alert/cmp_alert_wrapper';
-import { CmpWrapCommonToastArea } from '@/app/shared/components/toast/cmp_toast_wrapper';
+import { CmpWrapAlertArea, CmpWrapCommonAlertArea, CmpWrapErrorAlertArea } from '@/components/alert/cmp_alert_wrapper';
+import { CmpWrapCommonToastArea } from '@/components/toast/cmp_toast_wrapper';
 
 const GlobalPopups = () => {
     return (

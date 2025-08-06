@@ -1,0 +1,91 @@
+# Database DDL Standards
+
+## File Structure
+
+All DDL files should follow this structure:
+
+### Header Section
+
+```sql
+-- =====================================================
+-- [System Name] DDL
+-- =====================================================
+--
+-- 시스템 개요:
+-- - [Brief system description]
+-- - [Main functionality]
+-- - [Key features]
+--
+-- 주요 기능:
+-- - [Feature 1]
+-- - [Feature 2]
+-- - [Feature 3]
+--
+-- 테이블 목록:
+-- - [Table 1]: [Description]
+-- - [Table 2]: [Description]
+--
+-- 작성일: 2024년
+-- 작성자: ERI 시스템 개발팀
+-- =====================================================
+```
+
+### Table Creation
+
+- Use `BIGSERIAL` for primary key sequences
+- Include standard audit columns: `DEL_YN`, `DEL_DT`, `REG_EMP_ID`, `UPD_EMP_ID`, `REG_DT`, `UPD_DT`
+- Set default values: `DEL_YN CHAR(1) DEFAULT 'N'`, `REG_DT TIMESTAMP DEFAULT CURRENT_TIMESTAMP`
+- Apply naming conventions consistently
+
+### Comments
+
+- Add table comments: `COMMENT ON TABLE [table_name] IS '[description]';`
+- Add column comments for all columns
+- Use Korean descriptions for clarity
+
+### Indexes
+
+- Create indexes for foreign keys and frequently queried columns
+- Include indexes for `DEL_YN` columns
+- Use descriptive index names: `IDX_[table]_[column]`
+
+### File Summary
+
+End each DDL file with:
+
+```sql
+-- =====================================================
+-- 파일 요약
+-- =====================================================
+--
+-- 생성된 테이블:
+-- - [Table 1]: [Description]
+--
+-- 생성된 인덱스:
+-- - [Index 1]: [Description]
+--
+-- 주요 기능:
+-- - [Feature 1]
+-- - [Feature 2]
+--
+-- 축약 규칙 적용:
+-- - [Abbreviation 1]
+-- - [Abbreviation 2]
+--
+-- 작성일: 2024년
+-- 작성자: ERI 시스템 개발팀
+-- =====================================================
+```
+
+## Important Guidelines
+
+- Remove FOREIGN KEY constraints as per project requirements
+- Apply abbreviation rules consistently
+- Include sample data where appropriate
+- Use proper data types (VARCHAR, TEXT, TIMESTAMP, etc.)
+- Follow PostgreSQL conventions
+  description:
+  globs:
+  alwaysApply: false
+
+---

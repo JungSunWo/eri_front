@@ -12,14 +12,15 @@
 
 'use client';
 
-import GlobalPopups from '@/app/shared/components/common/GlobalPopups';
-import PageMove from '@/app/shared/components/common/PageMove';
+import GlobalPopups from '@/components/common/GlobalPopups';
+import PageMove from '@/components/common/PageMove';
 import { usePathname } from 'next/navigation';
 import HeaderArea from './HeaderArea';
 import LnbLayout from './LnbLayout';
 import LoginLayout from './LoginLayout';
 import PageLayout from './PageLayout';
 import ScrollToTop from './ScrollToTop';
+import FooterLayout from './footer';
 
 /**
  * 페이지 래퍼 컴포넌트
@@ -59,6 +60,15 @@ const PageWrapper = ({
    * 가이드 페이지는 특별한 LNB 레이아웃을 사용
    */
   const isGuidePage = pathname === '/guide';
+
+  console.log('PageWrapper 렌더링:', {
+    pathname,
+    title,
+    layoutType,
+    isGuidePage,
+    showCard,
+    timestamp: new Date().toISOString()
+  });
 
   /**
    * 가이드 페이지 특별 처리
@@ -102,6 +112,7 @@ const PageWrapper = ({
         {children}
         <GlobalPopups />
         <ScrollToTop />
+        <FooterLayout />
       </LayoutComponent>
     </>
   );

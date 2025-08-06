@@ -1,0 +1,63 @@
+# Frontend React/Next.js Standards
+
+## Component Structure
+
+- Use functional components with hooks
+- Follow the established file structure in `eoc_front/src/app/(pages)/`
+- Use Tailwind CSS for styling
+- Implement responsive design with `lg:`, `md:`, `sm:` prefixes
+
+## State Management
+
+- Use `useState` for local component state
+- Use `usePageMoveStore` for navigation state
+- Implement proper form state management
+- Use `useEffect` for side effects
+
+## UI Components
+
+- Use existing components like `Calendar`, `PageWrapper`, `Image`
+- Implement toast notifications for user feedback
+- Use proper loading states and error handling
+- Follow the established design patterns
+
+## Styling Guidelines
+
+- Use Tailwind CSS utility classes
+- Implement responsive grid layouts: `lg:grid-cols-2`, `lg:grid-cols-3`, etc.
+- Use consistent spacing: `gap-2`, `gap-3`, `gap-6`
+- Apply rounded corners: `rounded-lg`, `rounded-full`
+- Use consistent colors: `blue-600`, `gray-600`, `green-500`
+
+## Form Handling
+
+- Implement proper form validation
+- Use controlled components with `value` and `onChange`
+- Handle form submission with proper error handling
+- Implement file upload functionality
+
+## Event Handling
+
+- Use proper event handlers: `onClick`, `onChange`, `onSubmit`
+- Implement proper state updates
+- Handle date/time selection with proper formatting
+- Use Korean locale for date formatting: `toLocaleDateString('ko-KR')`
+
+## Layout Patterns
+
+- Use sidebar layouts with `sticky top-6`
+- Implement step-by-step processes with clear visual indicators
+- Use proper spacing and alignment
+- Implement responsive breakpoints
+
+## Code Organization
+
+- Keep components focused and single-purpose
+- Use proper imports and exports
+- Implement proper error boundaries
+- Follow React best practices
+  description:
+  globs:
+  alwaysApply: false
+
+---

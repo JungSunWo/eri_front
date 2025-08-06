@@ -2,7 +2,7 @@
 
 import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
 import { CmpAlertBtn, CmpAlertCont, CmpAlertTitle } from '@/app/shared/components/alert/cmp_alert';
-import { CmpButton } from '@/app/shared/components/button/cmp_button';
+import CmpButton from '@/app/shared/components/button/cmp_button';
 import { CmpAccordionCard, CmpAccordionCardBody, CmpAccordionCardItem, CmpAccordionCardTitle } from '@/app/shared/components/contents/accordioncard/cmp_accordionCard';
 import { CmpInfoBox, CmpInfoli } from '@/app/shared/components/contents/infobox/cmp_infobox';
 import { util } from "@/app/shared/utils/com_util";

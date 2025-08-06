@@ -1,13 +1,56 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 컴파일러 설정
-  compiler: {
-    styledComponents: true,
-    // 개발 시 불필요한 콘솔 로그 제거
-    removeConsole: process.env.NODE_ENV === 'production',
-  },
   // React StrictMode 설정
   reactStrictMode: false,
+
+  // styled-components 설정 (hydration 오류 방지)
+  compiler: {
+    styledComponents: {
+      ssr: true,
+      displayName: true,
+      pure: true,
+    },
+  },
+
+  // 개발 서버 설정 (WebSocket 연결 문제 해결)
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      // 개발 환경에서 HMR 설정
+      config.watchOptions = {
+        poll: 1000,
+        aggregateTimeout: 300,
+      };
+
+      // CSS preload 경고 해결을 위한 설정
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          ...config.optimization.splitChunks,
+          cacheGroups: {
+            ...config.optimization.splitChunks.cacheGroups,
+            styles: {
+              name: 'styles',
+              test: /\.(css|scss)$/,
+              chunks: 'all',
+              enforce: true,
+            },
+          },
+        },
+      };
+    }
+    return config;
+  },
+
+  // 개발 서버 설정
+  devIndicators: {
+    buildActivity: true,
+    buildActivityPosition: 'bottom-right',
+  },
+
+  // 실험적 기능 설정
+  experimental: {
+    optimizePackageImports: ['styled-components'],
+  },
 
   // 이미지 최적화 설정
   images: {
@@ -85,12 +128,6 @@ const nextConfig = {
   // 압축 설정
   compress: true,
 
-  // 개발 서버 설정
-  devIndicators: {
-    buildActivity: true,
-    buildActivityPosition: 'bottom-right',
-  },
-
   // 정적 파일 최적화
   poweredByHeader: false,
 
@@ -100,16 +137,8 @@ const nextConfig = {
   // 페이지 확장자 설정
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
 
-  // 이미지 최적화 설정
-  images: {
-    domains: [],
-    formats: ['image/webp', 'image/avif'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-  },
-
   // 정적 export 설정
   // output: 'export',
 };
 
-export default nextConfig;
+module.exports = nextConfig;

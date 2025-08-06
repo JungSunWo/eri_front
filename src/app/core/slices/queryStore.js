@@ -16,6 +16,55 @@ const isCacheValid = (timestamp, cacheTime = 5 * 60 * 1000) => {
   return Date.now() - timestamp < cacheTime;
 };
 
+// 캐시 키 생성 함수 (개선된 버전)
+const createCacheKey = (key) => {
+  if (typeof key === 'string') {
+    return key;
+  }
+
+  if (Array.isArray(key)) {
+    return key.map(item =>
+      typeof item === 'object' ? JSON.stringify(item) : String(item)
+    ).join('|');
+  }
+
+  if (typeof key === 'object') {
+    // 객체의 키를 정렬하여 일관된 캐시 키 생성
+    const sortedKeys = Object.keys(key).sort();
+    return sortedKeys.map(k => `${k}:${JSON.stringify(key[k])}`).join('|');
+  }
+
+  return String(key);
+};
+
+// 에러 타입 분류
+const classifyError = (error) => {
+  if (error.response) {
+    // 서버 응답이 있는 경우
+    const { status, data } = error.response;
+    return {
+      type: 'response',
+      status,
+      message: data?.message || `HTTP ${status} 에러`,
+      data: data
+    };
+  } else if (error.request) {
+    // 요청은 보냈지만 응답이 없는 경우
+    return {
+      type: 'network',
+      message: '네트워크 연결 오류',
+      original: error
+    };
+  } else {
+    // 요청 설정 중 오류
+    return {
+      type: 'request',
+      message: error.message || '요청 설정 오류',
+      original: error
+    };
+  }
+};
+
 export const useQueryStore = create(
   devtools(
     (set, get) => ({
@@ -39,7 +88,7 @@ export const useQueryStore = create(
           return null;
         }
 
-        const cacheKey = typeof key === 'string' ? key : JSON.stringify(key);
+        const cacheKey = createCacheKey(key);
         const cached = cache.get(cacheKey);
 
         // 캐시된 데이터가 있고 유효한 경우
@@ -104,6 +153,7 @@ export const useQueryStore = create(
             return data;
           } catch (error) {
             lastError = error;
+            const classifiedError = classifyError(error);
 
             if (attempt < retry) {
               // 재시도 전 대기
@@ -119,13 +169,13 @@ export const useQueryStore = create(
                   data: cached?.data || null,
                   isLoading: false,
                   isFetching: false,
-                  error: error.message,
+                  error: classifiedError,
                   timestamp: cached?.timestamp || Date.now(),
                   isStale: false
                 }
               }
             }));
-            throw error;
+            throw classifiedError;
           }
         }
       },
@@ -179,6 +229,7 @@ export const useQueryStore = create(
             return result;
           } catch (error) {
             lastError = error;
+            const classifiedError = classifyError(error);
 
             if (attempt < retry) {
               await new Promise(resolve => setTimeout(resolve, 1000));
@@ -190,20 +241,20 @@ export const useQueryStore = create(
                 ...state.mutations,
                 [key]: {
                   isLoading: false,
-                  error: error.message
+                  error: classifiedError
                 }
               }
             }));
 
-            if (onError) onError(error);
-            throw error;
+            if (onError) onError(classifiedError);
+            throw classifiedError;
           }
         }
       },
 
       // 쿼리 상태 가져오기
       getQueryState: (key) => {
-        const cacheKey = typeof key === 'string' ? key : JSON.stringify(key);
+        const cacheKey = createCacheKey(key);
         return get().queries[cacheKey] || {
           data: null,
           isLoading: false,
@@ -224,7 +275,7 @@ export const useQueryStore = create(
       // 캐시 무효화
       invalidateQueries: (queryKeys) => {
         queryKeys.forEach(queryKey => {
-          const cacheKey = typeof queryKey === 'string' ? queryKey : JSON.stringify(queryKey);
+          const cacheKey = createCacheKey(queryKey);
           cache.delete(cacheKey);
 
           set((state) => {
@@ -248,7 +299,7 @@ export const useQueryStore = create(
 
       // 쿼리 상태 업데이트 (수동)
       updateQueryData: (key, updater) => {
-        const cacheKey = typeof key === 'string' ? key : JSON.stringify(key);
+        const cacheKey = createCacheKey(key);
         const currentState = get().queries[cacheKey];
 
         if (currentState) {

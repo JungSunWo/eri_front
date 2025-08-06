@@ -6,14 +6,14 @@ import CmpInput from '@/app/shared/components/ui/CmpInput';
 import CmpSelect from '@/app/shared/components/ui/CmpSelect';
 import CommonModal from '@/app/shared/components/ui/CommonModal';
 import DataTable from '@/app/shared/components/ui/DataTable';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
-import { alert } from '@/app/shared/utils/ui_com';
+import { alert, toast } from '@/app/shared/utils/ui_com';
 import { useEffect, useState } from 'react';
 
 export default function AnonymousUserManagementPage() {
     // 상태 관리
     const [anonymousUsers, setAnonymousUsers] = useState([]);
-    const [loading, setLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalElements, setTotalElements] = useState(0);
     const [pageSize] = useState(10);
@@ -35,20 +35,114 @@ export default function AnonymousUserManagementPage() {
         useYn: 'Y'
     });
 
-    // 익명 사용자 목록 조회
-    const fetchAnonymousUsers = async () => {
-        setLoading(true);
-        try {
-            const response = await anonymousUserAPI.getList(currentPage, pageSize, searchCondition);
-            setAnonymousUsers(response.content || []);
-            setTotalElements(response.totalElements || 0);
-        } catch (error) {
-            console.error('익명 사용자 목록 조회 실패:', error);
-            alert('익명 사용자 목록을 불러오는데 실패했습니다.');
-        } finally {
-            setLoading(false);
-        }
+    // 익명 사용자 목록 조회 쿼리 파라미터
+    const queryParams = {
+        page: currentPage,
+        size: pageSize,
+        ...searchCondition
     };
+
+    // 익명 사용자 목록 조회 (Zustand Query 사용)
+    const {
+        data: anonymousUserData,
+        isLoading: anonymousUserLoading,
+        error: anonymousUserError,
+        refetch: refetchAnonymousUsers
+    } = useQuery(
+        ['anonymous-user-list', queryParams],
+        () => anonymousUserAPI.getList(currentPage, pageSize, searchCondition),
+        {
+            cacheTime: 2 * 60 * 1000, // 2분 캐시
+            retry: 3,
+            refetchOnWindowFocus: false,
+        }
+    );
+
+    // 익명 사용자 생성 뮤테이션
+    const {
+        mutate: createAnonymousUserMutation,
+        isLoading: createAnonymousUserLoading,
+        error: createAnonymousUserError
+    } = useMutation(
+        'create-anonymous-user',
+        (anonymousUserData) => anonymousUserAPI.create(anonymousUserData),
+        {
+            onSuccess: (response) => {
+                if (response.success) {
+                    toast.callCommonToastOpen('익명 사용자가 성공적으로 등록되었습니다.');
+                    setShowCreateModal(false);
+                    refetchAnonymousUsers();
+                } else {
+                    toast.callCommonToastOpen(response.message || '익명 사용자 등록에 실패했습니다.');
+                }
+            },
+            onError: (error) => {
+                console.error('익명 사용자 등록 실패:', error);
+                toast.callCommonToastOpen('익명 사용자 등록 중 오류가 발생했습니다.');
+            },
+            invalidateQueries: [['anonymous-user-list']]
+        }
+    );
+
+    // 익명 사용자 수정 뮤테이션
+    const {
+        mutate: updateAnonymousUserMutation,
+        isLoading: updateAnonymousUserLoading,
+        error: updateAnonymousUserError
+    } = useMutation(
+        'update-anonymous-user',
+        ({ anonymousId, anonymousUserData }) => anonymousUserAPI.update(anonymousId, anonymousUserData),
+        {
+            onSuccess: (response) => {
+                if (response.success) {
+                    toast.callCommonToastOpen('익명 사용자 정보가 성공적으로 수정되었습니다.');
+                    setShowEditModal(false);
+                    refetchAnonymousUsers();
+                } else {
+                    toast.callCommonToastOpen(response.message || '익명 사용자 수정에 실패했습니다.');
+                }
+            },
+            onError: (error) => {
+                console.error('익명 사용자 수정 실패:', error);
+                toast.callCommonToastOpen('익명 사용자 수정 중 오류가 발생했습니다.');
+            },
+            invalidateQueries: [['anonymous-user-list']]
+        }
+    );
+
+    // 익명 사용자 삭제 뮤테이션
+    const {
+        mutate: deleteAnonymousUserMutation,
+        isLoading: deleteAnonymousUserLoading,
+        error: deleteAnonymousUserError
+    } = useMutation(
+        'delete-anonymous-user',
+        ({ anonymousId, empId }) => anonymousUserAPI.delete(anonymousId, empId),
+        {
+            onSuccess: (response) => {
+                if (response.success) {
+                    toast.callCommonToastOpen('익명 사용자가 성공적으로 삭제되었습니다.');
+                    refetchAnonymousUsers();
+                } else {
+                    toast.callCommonToastOpen(response.message || '익명 사용자 삭제에 실패했습니다.');
+                }
+            },
+            onError: (error) => {
+                console.error('익명 사용자 삭제 실패:', error);
+                toast.callCommonToastOpen('익명 사용자 삭제 중 오류가 발생했습니다.');
+            },
+            invalidateQueries: [['anonymous-user-list']]
+        }
+    );
+
+    // 데이터 설정
+    useEffect(() => {
+        if (anonymousUserData?.success) {
+            const data = anonymousUserData.data;
+            setAnonymousUsers(data.content || data || []);
+            setTotalElements(data.totalElements || 0);
+        }
+    }, [anonymousUserData]);
 
     // 페이지 변경
     const handlePageChange = (page) => {
@@ -58,7 +152,6 @@ export default function AnonymousUserManagementPage() {
     // 검색 실행
     const handleSearch = () => {
         setCurrentPage(1);
-        fetchAnonymousUsers();
     };
 
     // 검색 조건 초기화
@@ -92,7 +185,7 @@ export default function AnonymousUserManagementPage() {
     // 익명 사용자 등록
     const handleCreate = async () => {
         if (!formData.nickname.trim()) {
-            alert('닉네임을 입력해주세요.');
+            toast.callCommonToastOpen('닉네임을 입력해주세요.');
             return;
         }
 
@@ -100,24 +193,21 @@ export default function AnonymousUserManagementPage() {
             // 닉네임 중복 확인
             const exists = await anonymousUserAPI.checkNicknameExists(formData.nickname);
             if (exists) {
-                alert('이미 사용 중인 닉네임입니다.');
+                toast.callCommonToastOpen('이미 사용 중인 닉네임입니다.');
                 return;
             }
 
-            await anonymousUserAPI.create(formData);
-            alert('익명 사용자가 등록되었습니다.');
-            setShowCreateModal(false);
-            fetchAnonymousUsers();
+            createAnonymousUserMutation(formData);
         } catch (error) {
             console.error('익명 사용자 등록 실패:', error);
-            alert('익명 사용자 등록에 실패했습니다.');
+            toast.callCommonToastOpen('익명 사용자 등록에 실패했습니다.');
         }
     };
 
     // 익명 사용자 수정
     const handleEdit = async () => {
         if (!formData.nickname.trim()) {
-            alert('닉네임을 입력해주세요.');
+            toast.callCommonToastOpen('닉네임을 입력해주세요.');
             return;
         }
 
@@ -126,35 +216,55 @@ export default function AnonymousUserManagementPage() {
             if (formData.nickname !== selectedUser.nickname) {
                 const exists = await anonymousUserAPI.checkNicknameExists(formData.nickname);
                 if (exists) {
-                    alert('이미 사용 중인 닉네임입니다.');
+                    toast.callCommonToastOpen('이미 사용 중인 닉네임입니다.');
                     return;
                 }
             }
 
-            await anonymousUserAPI.update(selectedUser.anonymousId, formData);
-            alert('익명 사용자가 수정되었습니다.');
-            setShowEditModal(false);
-            fetchAnonymousUsers();
+            updateAnonymousUserMutation({
+                anonymousId: selectedUser.anonymousId,
+                anonymousUserData: formData
+            });
         } catch (error) {
             console.error('익명 사용자 수정 실패:', error);
-            alert('익명 사용자 수정에 실패했습니다.');
+            toast.callCommonToastOpen('익명 사용자 수정에 실패했습니다.');
         }
     };
 
     // 익명 사용자 삭제
-    const handleDelete = async (user) => {
-        if (!confirm('정말 삭제하시겠습니까?')) {
-            return;
+    const handleDelete = (user) => {
+        alert.ConfirmOpen('익명 사용자 삭제', '정말로 이 익명 사용자를 삭제하시겠습니까?', {
+            okLabel: '삭제',
+            cancelLabel: '취소',
+            okCallback: () => {
+                deleteAnonymousUserMutation({
+                    anonymousId: user.anonymousId,
+                    empId: 'ADMIN001' // 실제로는 로그인한 사용자 ID 사용
+                });
+            }
+        });
+    };
+
+    // 로딩 상태 통합
+    const loading = anonymousUserLoading || createAnonymousUserLoading || updateAnonymousUserLoading || deleteAnonymousUserLoading;
+
+    // 에러 메시지 생성 함수
+    const getErrorMessage = (error) => {
+        if (!error) return '';
+
+        if (typeof error === 'string') {
+            return error;
         }
 
-        try {
-            await anonymousUserAPI.delete(user.anonymousId, 'ADMIN001'); // 실제로는 로그인한 사용자 ID 사용
-            alert('익명 사용자가 삭제되었습니다.');
-            fetchAnonymousUsers();
-        } catch (error) {
-            console.error('익명 사용자 삭제 실패:', error);
-            alert('익명 사용자 삭제에 실패했습니다.');
+        if (error.type === 'response') {
+            return `서버 오류 (${error.status}): ${error.message}`;
+        } else if (error.type === 'network') {
+            return '네트워크 연결 오류가 발생했습니다.';
+        } else if (error.type === 'request') {
+            return `요청 오류: ${error.message}`;
         }
+
+        return error.message || '알 수 없는 오류가 발생했습니다.';
     };
 
     // 테이블 컬럼 정의
@@ -218,13 +328,21 @@ export default function AnonymousUserManagementPage() {
         }
     ];
 
-    // 초기 데이터 로드
-    useEffect(() => {
-        fetchAnonymousUsers();
-    }, [currentPage]);
-
     return (
         <PageWrapper title="익명 사용자 관리">
+            {/* 에러 메시지 표시 */}
+            {(anonymousUserError || createAnonymousUserError || updateAnonymousUserError || deleteAnonymousUserError) && (
+                <div className="mb-6 p-4 bg-red-50 rounded border border-red-200">
+                    <div className="font-medium text-red-800 mb-1">오류가 발생했습니다:</div>
+                    <div className="text-sm text-red-600">
+                        {anonymousUserError && <div>익명 사용자 목록: {getErrorMessage(anonymousUserError)}</div>}
+                        {createAnonymousUserError && <div>익명 사용자 등록: {getErrorMessage(createAnonymousUserError)}</div>}
+                        {updateAnonymousUserError && <div>익명 사용자 수정: {getErrorMessage(updateAnonymousUserError)}</div>}
+                        {deleteAnonymousUserError && <div>익명 사용자 삭제: {getErrorMessage(deleteAnonymousUserError)}</div>}
+                    </div>
+                </div>
+            )}
+
             {/* 검색 영역 */}
             <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -258,10 +376,10 @@ export default function AnonymousUserManagementPage() {
                         </CmpSelect>
                     </div>
                     <div className="flex items-end gap-2">
-                        <CmpButton onClick={handleSearch}>
+                        <CmpButton onClick={handleSearch} disabled={loading}>
                             검색
                         </CmpButton>
-                        <CmpButton variant="outline" onClick={handleReset}>
+                        <CmpButton variant="outline" onClick={handleReset} disabled={loading}>
                             초기화
                         </CmpButton>
                     </div>
@@ -273,7 +391,7 @@ export default function AnonymousUserManagementPage() {
                 <h2 className="text-lg font-semibold text-gray-900">
                     익명 사용자 목록 ({totalElements}건)
                 </h2>
-                <CmpButton onClick={handleCreateModalOpen}>
+                <CmpButton onClick={handleCreateModalOpen} disabled={loading}>
                     새 익명 사용자 등록
                 </CmpButton>
             </div>
@@ -332,8 +450,8 @@ export default function AnonymousUserManagementPage() {
                     <CmpButton variant="outline" onClick={() => setShowCreateModal(false)}>
                         취소
                     </CmpButton>
-                    <CmpButton onClick={handleCreate}>
-                        등록
+                    <CmpButton onClick={handleCreate} disabled={loading}>
+                        {loading ? '등록 중...' : '등록'}
                     </CmpButton>
                 </div>
             </CommonModal>
@@ -379,8 +497,8 @@ export default function AnonymousUserManagementPage() {
                     <CmpButton variant="outline" onClick={() => setShowEditModal(false)}>
                         취소
                     </CmpButton>
-                    <CmpButton onClick={handleEdit}>
-                        수정
+                    <CmpButton onClick={handleEdit} disabled={loading}>
+                        {loading ? '수정 중...' : '수정'}
                     </CmpButton>
                 </div>
             </CommonModal>

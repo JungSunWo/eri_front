@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import styled from 'styled-components';
 
 // Styled components
@@ -47,10 +46,10 @@ const LoginBody = styled.div`
   padding: 2rem 1.5rem;
 `;
 
-const LoginLayout = ({ 
-  title, 
-  subtitle, 
-  children, 
+const LoginLayout = ({
+  title,
+  subtitle,
+  children,
   className = '',
   headerClassName = '',
   bodyClassName = ''
@@ -70,4 +69,4 @@ const LoginLayout = ({
   );
 };
 
-export default LoginLayout; 
+export default LoginLayout;

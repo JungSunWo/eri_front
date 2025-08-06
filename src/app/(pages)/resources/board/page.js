@@ -13,8 +13,10 @@
 
 import { boardAPI } from '@/app/core/services/api';
 import { CmpInput, CmpSelect, CmpTextarea } from '@/app/shared/components/ui';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
 import { toast } from '@/app/shared/utils/ui_com';
+import ImageTextModal from '@/components/ImageTextModal';
 import {
     Calendar,
     ChevronLeft,
@@ -34,14 +36,12 @@ import {
     X
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import ImageTextModal from '../../../../components/ImageTextModal';
 
 export default function EmployeeRightsBoardPage() {
   // 상태 관리
   const [boards, setBoards] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [selectedBoard, setSelectedBoard] = useState(null);
   const [comments, setComments] = useState([]);
   const [currentReplyTo, setCurrentReplyTo] = useState(null);
@@ -130,105 +130,480 @@ export default function EmployeeRightsBoardPage() {
     { value: 'QUESTION', label: '질문' }
   ];
 
-  // 페이지 로드 시 게시글 목록 조회
-  useEffect(() => {
-    loadBoardList();
-  }, [currentPage, searchType, searchKeyword, categoryFilter, sortBy]);
-
-  // 게시글 목록 조회
-  const loadBoardList = async () => {
-    setLoading(true);
-    try {
-      const params = {
-        page: currentPage,
-        size: 10,
-        searchType,
-        searchKeyword,
-        categoryCd: categoryFilter,
-        sortBy,
-        sortDirection: 'DESC'
-      };
-
-      const result = await boardAPI.getBoardList(params);
-
-      if (result.success) {
-        setBoards(result.content);
-        setTotalPages(result.totalPages || 1);
-      } else {
-        displayToast('게시글 목록 조회 실패: ' + result.message);
-      }
-    } catch (error) {
-      displayToast('게시글 목록 조회 실패: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
+  // Query parameters
+  const boardQueryParams = {
+    page: currentPage,
+    size: 10,
+    searchType,
+    searchKeyword,
+    categoryCd: categoryFilter,
+    sortBy,
+    sortDirection: 'DESC'
   };
 
-  // 게시글 상세 조회
-  const showBoardDetail = async (boardSeq) => {
-    try {
-      const result = await boardAPI.getBoardDetail(boardSeq);
-      console.log('게시글 상세 API 응답:', result); // 디버깅용
-
-      if (result && result.success) {
-        // 백엔드에서 전달받은 isAuthor 정보를 게시글 데이터에 추가
-        const boardData = {
-          ...result.data,
-          isAuthor: result.isAuthor || false
-        };
-        setSelectedBoard(boardData);
-        setShowDetailModal(true);
-        loadComments(boardSeq);
-        loadFiles(boardSeq);
-      } else {
-        displayToast('게시글 조회 실패: ' + (result?.message || '알 수 없는 오류'));
-      }
-    } catch (error) {
-      displayToast('게시글 조회 실패: ' + error.message);
+  // 게시글 목록 조회 쿼리
+  const {
+    data: boardListData,
+    isLoading: boardListLoading,
+    error: boardListError,
+    refetch: refetchBoardList
+  } = useQuery(
+    ['board-list', boardQueryParams],
+    () => boardAPI.getBoardList(boardQueryParams),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false
     }
-  };
+  );
 
-  // 댓글 목록 조회
-  const loadComments = async (boardSeq) => {
-    try {
-      const result = await boardAPI.getCommentList(boardSeq);
-      console.log('댓글 API 응답:', result); // 디버깅용
+  // 게시글 상세 조회 쿼리
+  const {
+    data: boardDetailData,
+    isLoading: boardDetailLoading,
+    error: boardDetailError,
+    refetch: refetchBoardDetail
+  } = useQuery(
+    ['board-detail', selectedBoard?.seq],
+    () => boardAPI.getBoardDetail(selectedBoard?.seq),
+    {
+      cacheTime: 5 * 60 * 1000, // 5분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+      enabled: !!selectedBoard?.seq
+    }
+  );
 
-      if (result && result.success) {
-        // 다양한 응답 구조 대응
-        const commentData = result.data || result.content || result || [];
-        console.log('댓글 데이터:', commentData); // 디버깅용
+  // 댓글 목록 조회 쿼리
+  const {
+    data: commentListData,
+    isLoading: commentListLoading,
+    error: commentListError,
+    refetch: refetchCommentList
+  } = useQuery(
+    ['comment-list', selectedBoard?.seq],
+    () => boardAPI.getCommentList(selectedBoard?.seq),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+      enabled: !!selectedBoard?.seq
+    }
+  );
 
-        // 각 댓글의 parentSeq와 depth 정보 확인
-        if (Array.isArray(commentData)) {
-          commentData.forEach((comment, index) => {
-            console.log(`댓글 ${index + 1}:`, {
-              seq: comment.seq,
-              id: comment.id,
-              parentSeq: comment.parentSeq,
-              parentId: comment.parentId,
-              depth: comment.depth,
-              cntn: comment.cntn?.substring(0, 30) + '...',
-              rgstEmpNm: comment.rgstEmpNm
-            });
-          });
+  // 게시글 등록 뮤테이션
+  const {
+    mutate: createBoardMutation,
+    isLoading: createBoardLoading,
+    error: createBoardError
+  } = useMutation(
+    'create-board',
+    (boardData) => boardAPI.createBoard(boardData),
+    {
+      onSuccess: (response) => {
+        if (response && response.success) {
+          const boardSeq = response.data?.seq;
+
+          // 파일이 있으면 업로드
+          if (writeModalFiles.length > 0 && boardSeq) {
+            handleFileUploadForBoard(boardSeq, writeModalFiles);
+          }
+
+          displayToast('게시글이 등록되었습니다.');
+          resetWriteModal();
+          refetchBoardList();
+        } else {
+          displayToast('게시글 등록 실패: ' + (response?.message || '알 수 없는 오류'));
         }
+      },
+      onError: (error) => {
+        console.error('게시글 등록 실패:', error);
+        displayToast('게시글 등록 실패: ' + error.message);
+      },
+      invalidateQueries: [['board-list']]
+    }
+  );
 
-        // 댓글을 계층 구조로 정렬
-        const sortedComments = sortCommentsByHierarchy(Array.isArray(commentData) ? commentData : []);
-        console.log('정렬된 댓글:', sortedComments); // 디버깅용
+  // 게시글 수정 뮤테이션
+  const {
+    mutate: updateBoardMutation,
+    isLoading: updateBoardLoading,
+    error: updateBoardError
+  } = useMutation(
+    'update-board',
+    (data) => boardAPI.updateBoard(data.boardSeq, data.boardData),
+    {
+      onSuccess: (response) => {
+        if (response && response.success) {
+          const boardSeq = selectedBoard?.seq;
 
-        // 백엔드에서 전달받은 isAuthor 정보가 각 댓글에 포함되어 있음
-        setComments(sortedComments);
-      } else {
-        console.error('댓글 목록 조회 실패:', result?.message || '알 수 없는 오류');
-        setComments([]);
-      }
-    } catch (error) {
-      console.error('댓글 목록 조회 실패:', error);
+          // 파일이 있으면 업로드
+          if (editModalFiles.length > 0 && boardSeq) {
+            handleFileUploadForBoard(boardSeq, editModalFiles);
+          }
+
+          displayToast('게시글이 수정되었습니다.');
+          resetEditModal();
+          // 상세 정보 새로고침
+          if (selectedBoard) {
+            refetchBoardDetail();
+          }
+          // 목록 새로고침
+          refetchBoardList();
+        } else {
+          displayToast('게시글 수정 실패: ' + (response?.message || '알 수 없는 오류'));
+        }
+      },
+      onError: (error) => {
+        console.error('게시글 수정 실패:', error);
+        displayToast('게시글 수정 실패: ' + error.message);
+      },
+      invalidateQueries: [['board-list'], ['board-detail']]
+    }
+  );
+
+  // 게시글 삭제 뮤테이션
+  const {
+    mutate: deleteBoardMutation,
+    isLoading: deleteBoardLoading,
+    error: deleteBoardError
+  } = useMutation(
+    'delete-board',
+    (boardSeq) => boardAPI.deleteBoard(boardSeq),
+    {
+      onSuccess: (response) => {
+        if (response && response.success) {
+          displayToast('게시글이 삭제되었습니다.');
+          setShowDetailModal(false);
+          setSelectedBoard(null);
+          refetchBoardList();
+        } else {
+          displayToast('게시글 삭제 실패: ' + (response?.message || '알 수 없는 오류'));
+        }
+      },
+      onError: (error) => {
+        console.error('게시글 삭제 실패:', error);
+        displayToast('게시글 삭제 실패: ' + error.message);
+      },
+      invalidateQueries: [['board-list']]
+    }
+  );
+
+  // 댓글 등록 뮤테이션
+  const {
+    mutate: createCommentMutation,
+    isLoading: createCommentLoading,
+    error: createCommentError
+  } = useMutation(
+    'create-comment',
+    (commentData) => boardAPI.createComment(commentData),
+    {
+      onSuccess: (response) => {
+        if (response && response.success) {
+          const message = currentReplyTo ? '답글이 등록되었습니다.' : '댓글이 등록되었습니다.';
+          displayToast(message);
+          resetCommentForm();
+          setCurrentReplyTo(null); // 답글 모드 초기화
+          refetchCommentList();
+        } else {
+          displayToast('댓글 등록 실패: ' + (response?.message || '알 수 없는 오류'));
+        }
+      },
+      onError: (error) => {
+        console.error('댓글 등록 실패:', error);
+        displayToast('댓글 등록 실패: ' + error.message);
+      },
+      invalidateQueries: [['comment-list']]
+    }
+  );
+
+  // 댓글 수정 뮤테이션
+  const {
+    mutate: updateCommentMutation,
+    isLoading: updateCommentLoading,
+    error: updateCommentError
+  } = useMutation(
+    'update-comment',
+    (data) => boardAPI.updateComment(data.commentSeq, data.updateData),
+    {
+      onSuccess: (response) => {
+        if (response && response.success) {
+          displayToast('댓글이 수정되었습니다.');
+          setShowCommentEditModal(false);
+          setEditingComment(null);
+          resetCommentForm();
+          refetchCommentList();
+        } else {
+          displayToast('댓글 수정 실패: ' + (response?.message || '알 수 없는 오류'));
+        }
+      },
+      onError: (error) => {
+        console.error('댓글 수정 실패:', error);
+        displayToast('댓글 수정 실패: ' + error.message);
+      },
+      invalidateQueries: [['comment-list']]
+    }
+  );
+
+  // 댓글 삭제 뮤테이션
+  const {
+    mutate: deleteCommentMutation,
+    isLoading: deleteCommentLoading,
+    error: deleteCommentError
+  } = useMutation(
+    'delete-comment',
+    (commentSeq) => boardAPI.deleteComment(commentSeq),
+    {
+      onSuccess: (response) => {
+        if (response && response.success) {
+          displayToast('댓글이 삭제되었습니다.');
+          refetchCommentList();
+        } else {
+          displayToast('댓글 삭제 실패: ' + (response?.message || '알 수 없는 오류'));
+        }
+      },
+      onError: (error) => {
+        console.error('댓글 삭제 실패:', error);
+        displayToast('댓글 삭제 실패: ' + error.message);
+      },
+      invalidateQueries: [['comment-list']]
+    }
+  );
+
+  // 게시글 좋아요 뮤테이션
+  const {
+    mutate: likeBoardMutation,
+    isLoading: likeBoardLoading,
+    error: likeBoardError
+  } = useMutation(
+    'like-board',
+    (data) => boardAPI.likeBoard(data.boardSeq, data.likeType),
+    {
+      onSuccess: (response) => {
+        if (response && response.success) {
+          refetchBoardDetail();
+        } else {
+          displayToast('좋아요 처리 실패: ' + (response?.message || '알 수 없는 오류'));
+        }
+      },
+      onError: (error) => {
+        console.error('좋아요 처리 실패:', error);
+        displayToast('좋아요 처리 실패: ' + error.message);
+      },
+      invalidateQueries: [['board-detail']]
+    }
+  );
+
+  // 댓글 좋아요 뮤테이션
+  const {
+    mutate: likeCommentMutation,
+    isLoading: likeCommentLoading,
+    error: likeCommentError
+  } = useMutation(
+    'like-comment',
+    (data) => boardAPI.likeComment(data.commentSeq, data.likeType),
+    {
+      onSuccess: (response) => {
+        if (response && response.success) {
+          refetchCommentList();
+        } else {
+          displayToast('좋아요 처리 실패: ' + (response?.message || '알 수 없는 오류'));
+        }
+      },
+      onError: (error) => {
+        console.error('좋아요 처리 실패:', error);
+        displayToast('좋아요 처리 실패: ' + error.message);
+      },
+      invalidateQueries: [['comment-list']]
+    }
+  );
+
+  // 데이터 설정
+  useEffect(() => {
+    if (boardListData?.success) {
+      setBoards(boardListData.content);
+      setTotalPages(boardListData.totalPages || 1);
+    } else if (boardListData && !boardListData.success) {
+      displayToast('게시글 목록 조회 실패: ' + boardListData.message);
+    }
+  }, [boardListData]);
+
+  useEffect(() => {
+    if (boardDetailData?.success) {
+      // 백엔드에서 전달받은 isAuthor 정보를 게시글 데이터에 추가
+      const boardData = {
+        ...boardDetailData.data,
+        isAuthor: boardDetailData.isAuthor || false
+      };
+      setSelectedBoard(boardData);
+      setShowDetailModal(true);
+    } else if (boardDetailData && !boardDetailData.success) {
+      displayToast('게시글 조회 실패: ' + (boardDetailData?.message || '알 수 없는 오류'));
+    }
+  }, [boardDetailData]);
+
+  useEffect(() => {
+    if (commentListData?.success) {
+      // 다양한 응답 구조 대응
+      const commentData = commentListData.data || commentListData.content || commentListData || [];
+
+      // 댓글을 계층 구조로 정렬
+      const sortedComments = sortCommentsByHierarchy(Array.isArray(commentData) ? commentData : []);
+      setComments(sortedComments);
+    } else if (commentListData && !commentListData.success) {
+      console.error('댓글 목록 조회 실패:', commentListData?.message || '알 수 없는 오류');
       setComments([]);
     }
+  }, [commentListData]);
+
+  // 페이지 로드 시 게시글 목록 조회
+  useEffect(() => {
+    // Query will automatically refetch when parameters change
+  }, [currentPage, searchType, searchKeyword, categoryFilter, sortBy]);
+
+  // 게시글 상세 조회
+  const showBoardDetail = (boardSeq) => {
+    setSelectedBoard({ seq: boardSeq });
   };
+
+  // 게시글 등록
+  const submitBoard = () => {
+    createBoardMutation(boardForm);
+  };
+
+  // 댓글 등록
+  const submitComment = () => {
+    if (!selectedBoard) return;
+
+    const commentData = {
+      boardSeq: selectedBoard.seq,
+      cntn: commentForm.cntn,
+      parentSeq: currentReplyTo
+    };
+
+    createCommentMutation(commentData);
+  };
+
+  // 답글 등록
+  const submitReply = (commentSeq) => {
+    if (!selectedBoard || !replyFormData[commentSeq]) return;
+
+    const commentData = {
+      boardSeq: selectedBoard.seq,
+      cntn: replyFormData[commentSeq],
+      parentSeq: commentSeq
+    };
+
+    createCommentMutation(commentData);
+  };
+
+  // 댓글 좋아요/싫어요
+  const likeComment = (commentSeq, likeType) => {
+    likeCommentMutation({ commentSeq, likeType });
+  };
+
+  // 댓글 수정
+  const updateComment = () => {
+    if (!editingComment) return;
+
+    const updateData = {
+      cntn: commentForm.cntn
+    };
+
+    updateCommentMutation({
+      commentSeq: editingComment.seq,
+      updateData
+    });
+  };
+
+  // 댓글 삭제
+  const deleteComment = (commentSeq) => {
+    if (!window.confirm('정말로 이 댓글을 삭제하시겠습니까?')) {
+      return;
+    }
+
+    deleteCommentMutation(commentSeq);
+  };
+
+  // 게시글 좋아요/싫어요
+  const likeBoard = (boardSeq, likeType) => {
+    likeBoardMutation({ boardSeq, likeType });
+  };
+
+  // 게시글 수정
+  const updateBoard = () => {
+    if (!selectedBoard) return;
+
+    const updateData = {
+      ...boardForm
+    };
+
+    updateBoardMutation({
+      boardSeq: selectedBoard.seq,
+      boardData: updateData
+    });
+  };
+
+  // 게시글 삭제
+  const deleteBoard = (boardSeq) => {
+    if (!window.confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
+      return;
+    }
+
+    deleteBoardMutation(boardSeq);
+  };
+
+  // 파일 업로드 처리 (게시글용)
+  const handleFileUploadForBoard = async (boardSeq, filesToUpload) => {
+    try {
+      const filesToUploadArray = filesToUpload.map(file => file.file);
+      const uploadedFiles = await handleFileUpload(boardSeq, filesToUploadArray);
+
+      // 이미지 텍스트 링크 정보 업데이트
+      if (uploadedFiles && uploadedFiles.length > 0) {
+        for (let i = 0; i < uploadedFiles.length; i++) {
+          const uploadedFile = uploadedFiles[i];
+          const originalFile = filesToUpload[i];
+          const links = originalFile.links || [];
+
+          if (links && links.length > 0) {
+            const linkData = {
+              links: JSON.stringify(links)
+            };
+            await boardAPI.updateFileLinks(uploadedFile.fileSeq, linkData);
+          }
+        }
+      }
+    } catch (fileError) {
+      console.error('파일 업로드 실패:', fileError);
+      displayToast('게시글은 등록되었지만 파일 업로드에 실패했습니다.');
+    }
+  };
+
+  // 에러 메시지 생성 함수
+  const getErrorMessage = (error) => {
+    if (!error) return '';
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    if (error.type === 'response') {
+      return `서버 오류 (${error.status}): ${error.message}`;
+    } else if (error.type === 'network') {
+      return '네트워크 연결 오류가 발생했습니다.';
+    } else if (error.type === 'request') {
+      return `요청 오류: ${error.message}`;
+    }
+
+    return error.message || '알 수 없는 오류가 발생했습니다.';
+  };
+
+  // 로딩 상태 통합
+  const loading = boardListLoading || boardDetailLoading || commentListLoading ||
+                 createBoardLoading || updateBoardLoading || deleteBoardLoading ||
+                 createCommentLoading || updateCommentLoading || deleteCommentLoading ||
+                 likeBoardLoading || likeCommentLoading;
 
   // 댓글을 계층 구조로 정렬하는 함수
   const sortCommentsByHierarchy = (comments) => {
@@ -303,328 +678,6 @@ export default function EmployeeRightsBoardPage() {
     console.log('=== 계층 구조 정렬 완료 ===');
 
     return flattenComments;
-  };
-
-  // 게시글 등록
-  const submitBoard = async () => {
-    try {
-      const result = await boardAPI.createBoard(boardForm);
-
-      if (result && result.success) {
-        const boardSeq = result.data?.seq;
-
-        // 파일이 있으면 업로드
-        if (writeModalFiles.length > 0 && boardSeq) {
-          try {
-            const filesToUpload = writeModalFiles.map(file => file.file);
-            const uploadedFiles = await handleFileUpload(boardSeq, filesToUpload);
-
-            // 이미지 텍스트 링크 정보 업데이트
-            if (uploadedFiles && uploadedFiles.length > 0) {
-              for (let i = 0; i < uploadedFiles.length; i++) {
-                const uploadedFile = uploadedFiles[i];
-                const originalFile = writeModalFiles[i];
-                const links = writeModalFileLinks[originalFile.fileSeq];
-
-                if (links && links.length > 0) {
-                  const linkData = {
-                    links: JSON.stringify(links)
-                  };
-                  await boardAPI.updateFileLinks(uploadedFile.fileSeq, linkData);
-                }
-              }
-            }
-          } catch (fileError) {
-            console.error('파일 업로드 실패:', fileError);
-            displayToast('게시글은 등록되었지만 파일 업로드에 실패했습니다.');
-          }
-        }
-
-        displayToast('게시글이 등록되었습니다.');
-        resetWriteModal();
-        loadBoardList();
-      } else {
-        displayToast('게시글 등록 실패: ' + (result?.message || '알 수 없는 오류'));
-      }
-    } catch (error) {
-      displayToast('게시글 등록 실패: ' + error.message);
-    }
-  };
-
-  // 댓글 등록
-  const submitComment = async () => {
-    if (!selectedBoard) return;
-
-    try {
-      const commentData = {
-        boardSeq: selectedBoard.seq,
-        cntn: commentForm.cntn,
-        parentSeq: currentReplyTo
-      };
-
-      console.log('댓글 등록 데이터:', commentData); // 디버깅용
-      console.log('답글 대상:', currentReplyTo); // 디버깅용
-
-      const result = await boardAPI.createComment(commentData);
-
-      if (result && result.success) {
-        const message = currentReplyTo ? '답글이 등록되었습니다.' : '댓글이 등록되었습니다.';
-        displayToast(message);
-        resetCommentForm();
-        setCurrentReplyTo(null); // 답글 모드 초기화
-        loadComments(selectedBoard.seq);
-      } else {
-        displayToast('댓글 등록 실패: ' + (result?.message || '알 수 없는 오류'));
-      }
-    } catch (error) {
-      console.error('댓글 등록 에러:', error); // 디버깅용
-      displayToast('댓글 등록 실패: ' + error.message);
-    }
-  };
-
-  // 답글 등록
-  const submitReply = async (commentSeq) => {
-    if (!selectedBoard || !replyFormData[commentSeq]) return;
-
-    try {
-      const commentData = {
-        boardSeq: selectedBoard.seq,
-        cntn: replyFormData[commentSeq],
-        parentSeq: commentSeq
-      };
-
-      console.log('=== 답글 등록 시작 ===');
-      console.log('답글 등록 데이터:', commentData); // 디버깅용
-      console.log('답글 대상 댓글 정보:', {
-        commentSeq,
-        parentSeq: commentSeq,
-        boardSeq: selectedBoard.seq,
-        content: replyFormData[commentSeq]
-      });
-      console.log('전송할 데이터 타입 확인:', {
-        boardSeq: typeof commentData.boardSeq,
-        parentSeq: typeof commentData.parentSeq,
-        cntn: typeof commentData.cntn
-      });
-
-      const result = await boardAPI.createComment(commentData);
-
-      if (result && result.success) {
-        console.log('답글 등록 성공:', result); // 디버깅용
-        console.log('등록된 답글 데이터:', result.data);
-        displayToast('답글이 등록되었습니다.');
-        // 해당 댓글의 답글 입력란 제거
-        setReplyFormData(prev => {
-          const newData = { ...prev };
-          delete newData[commentSeq];
-          return newData;
-        });
-        setCurrentReplyTo(null);
-        loadComments(selectedBoard.seq);
-      } else {
-        console.error('답글 등록 실패:', result); // 디버깅용
-        displayToast('답글 등록 실패: ' + (result?.message || '알 수 없는 오류'));
-      }
-    } catch (error) {
-      console.error('답글 등록 에러:', error); // 디버깅용
-      console.error('에러 상세 정보:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      displayToast('답글 등록 실패: ' + error.message);
-    }
-  };
-
-  // 댓글 좋아요/싫어요
-  const likeComment = async (commentSeq, likeType) => {
-    try {
-      const result = await boardAPI.likeComment(commentSeq, likeType);
-
-      if (result && result.success) {
-        loadComments(selectedBoard.seq);
-      } else {
-        displayToast('좋아요 처리 실패: ' + (result?.message || '알 수 없는 오류'));
-      }
-    } catch (error) {
-      displayToast('좋아요 처리 실패: ' + error.message);
-    }
-  };
-
-  // 댓글 수정 모달 열기
-  const openCommentEditModal = (comment) => {
-    setEditingComment(comment);
-    setCommentForm({
-      cntn: comment.cntn
-    });
-    setShowCommentEditModal(true);
-  };
-
-  // 댓글 수정
-  const updateComment = async () => {
-    if (!editingComment) return;
-
-    try {
-      console.log('수정할 댓글 정보:', editingComment); // 디버깅용
-
-      const updateData = {
-        cntn: commentForm.cntn
-      };
-
-      const result = await boardAPI.updateComment(editingComment.seq, updateData);
-
-      if (result && result.success) {
-        displayToast('댓글이 수정되었습니다.');
-        setShowCommentEditModal(false);
-        setEditingComment(null);
-        resetCommentForm();
-        loadComments(selectedBoard.seq);
-      } else {
-        displayToast('댓글 수정 실패: ' + (result?.message || '알 수 없는 오류'));
-      }
-    } catch (error) {
-      console.error('댓글 수정 에러:', error); // 디버깅용
-      displayToast('댓글 수정 실패: ' + error.message);
-    }
-  };
-
-  // 댓글 삭제
-  const deleteComment = async (commentSeq) => {
-    if (!window.confirm('정말로 이 댓글을 삭제하시겠습니까?')) {
-      return;
-    }
-
-    try {
-      const result = await boardAPI.deleteComment(commentSeq);
-
-      if (result && result.success) {
-        displayToast('댓글이 삭제되었습니다.');
-        loadComments(selectedBoard.seq);
-      } else {
-        displayToast('댓글 삭제 실패: ' + (result?.message || '알 수 없는 오류'));
-      }
-    } catch (error) {
-      displayToast('댓글 삭제 실패: ' + error.message);
-    }
-  };
-
-  // 게시글 좋아요/싫어요
-  const likeBoard = async (boardSeq, likeType) => {
-    try {
-      const result = await boardAPI.likeBoard(boardSeq, likeType);
-
-      if (result && result.success) {
-        showBoardDetail(boardSeq);
-      } else {
-        displayToast('좋아요 처리 실패: ' + (result?.message || '알 수 없는 오류'));
-      }
-    } catch (error) {
-      displayToast('좋아요 처리 실패: ' + error.message);
-    }
-  };
-
-  // 게시글 수정 모달 열기
-  const openEditModal = (board) => {
-    setBoardForm({
-      ttl: board.ttl,
-      cntn: board.cntn,
-      categoryCd: board.categoryCd || '',
-      noticeYn: board.noticeYn || 'N'
-    });
-    setIsEditMode(true);
-    setShowEditModal(true);
-    // 상세 모달은 그대로 유지 (수정 완료 후 돌아가기 위해)
-  };
-
-  // 게시글 수정
-  const updateBoard = async () => {
-    if (!selectedBoard) return;
-
-    try {
-      console.log('수정할 게시글 정보:', selectedBoard); // 디버깅용
-      console.log('수정할 게시글 seq:', selectedBoard.seq); // 디버깅용
-
-      const updateData = {
-        ...boardForm
-      };
-
-      console.log('수정 데이터:', updateData); // 디버깅용
-
-      const result = await boardAPI.updateBoard(selectedBoard.seq, updateData);
-
-      if (result && result.success) {
-        const boardSeq = selectedBoard.seq;
-
-        // 파일이 있으면 업로드
-        if (editModalFiles.length > 0 && boardSeq) {
-          try {
-            const filesToUpload = editModalFiles.map(file => file.file);
-            const uploadedFiles = await handleFileUpload(boardSeq, filesToUpload);
-
-            // 이미지 텍스트 링크 정보 업데이트
-            if (uploadedFiles && uploadedFiles.length > 0) {
-              for (let i = 0; i < uploadedFiles.length; i++) {
-                const uploadedFile = uploadedFiles[i];
-                const originalFile = editModalFiles[i];
-                const links = editModalFileLinks[originalFile.fileSeq];
-
-                if (links && links.length > 0) {
-                  const linkData = {
-                    links: JSON.stringify(links)
-                  };
-                  await boardAPI.updateFileLinks(uploadedFile.fileSeq, linkData);
-                }
-              }
-            }
-          } catch (fileError) {
-            console.error('파일 업로드 실패:', fileError);
-            displayToast('게시글은 수정되었지만 파일 업로드에 실패했습니다.');
-          }
-        }
-
-        displayToast('게시글이 수정되었습니다.');
-        resetEditModal();
-        // 상세 정보 새로고침
-        showBoardDetail(selectedBoard.seq);
-        // 목록 새로고침
-        loadBoardList();
-      } else {
-        displayToast('게시글 수정 실패: ' + (result?.message || '알 수 없는 오류'));
-      }
-    } catch (error) {
-      console.error('게시글 수정 에러:', error); // 디버깅용
-      displayToast('게시글 수정 실패: ' + error.message);
-    }
-  };
-
-  // 게시글 삭제
-  const deleteBoard = async (boardSeq) => {
-    if (!window.confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
-      return;
-    }
-
-    try {
-      const result = await boardAPI.deleteBoard(boardSeq);
-
-      if (result && result.success) {
-        displayToast('게시글이 삭제되었습니다.');
-        setShowDetailModal(false);
-        setSelectedBoard(null);
-        loadBoardList();
-      } else {
-        displayToast('게시글 삭제 실패: ' + (result?.message || '알 수 없는 오류'));
-      }
-    } catch (error) {
-      displayToast('게시글 삭제 실패: ' + error.message);
-    }
-  };
-
-  // 현재 로그인한 사용자 ID 가져오기 (storage 컴포넌트 사용)
-  // 작성자 본인인지 확인 (백엔드에서 전달받은 isAuthor 정보 사용)
-  const isAuthor = (boardAuthorId, isAuthorFromServer) => {
-    // 백엔드에서 세션을 통해 작성자 확인을 처리하므로
-    // 서버에서 전달받은 isAuthor 정보를 사용
-    return isAuthorFromServer || false;
   };
 
   // 폼 초기화
@@ -711,7 +764,7 @@ export default function EmployeeRightsBoardPage() {
   // 검색 실행
   const handleSearch = () => {
     setCurrentPage(1);
-    loadBoardList();
+    refetchBoardList();
   };
 
   // 검색 초기화

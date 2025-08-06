@@ -1,7 +1,7 @@
 'use client';
 
-import { CmpToastArea, CmpToastBtn, CmpToastCont } from '@/app/shared/components/toast/cmp_toast';
-import { toast } from '@/app/shared/utils/ui_com';
+import { CmpToastArea, CmpToastBtn, CmpToastCont } from '@/components/toast/cmp_toast';
+import { toast } from '@/utils/ui_com';
 import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 

@@ -12,18 +12,18 @@
 
 'use client';
 
-import { useMenuStore } from '@/app/core/slices/menuStore';
-import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
-import { CmpButton } from '@/app/shared/components/button/cmp_button';
-import { CmpSection, CmpSectionBody } from '@/app/shared/components/contents/cmp_section/cmp_section';
+import CmpButton from '@/app/shared/components/button/cmp_button';
+import { CmpSection, CmpSectionBody } from '@/components/contents/cmp_section/cmp_section';
+import { useMenuStore } from '@/slices/menuStore';
+import { usePageMoveStore } from '@/slices/pageMoveStore';
 import { useEffect, useState } from 'react';
 
 
-import { authAPI } from '@/app/core/services/api';
-import CmpInput from '@/app/shared/components/ui/CmpInput';
-import PageWrapper from '@/app/shared/layouts/PageWrapper';
-import storage from '@/app/shared/utils/storage';
-import { alert } from '@/app/shared/utils/ui_com';
+import CmpInput from '@/components/ui/CmpInput';
+import PageWrapper from '@/layouts/PageWrapper';
+import { authAPI } from '@/services/api';
+import storage from '@/utils/storage';
+import { alert } from '@/utils/ui_com';
 import { Building, User } from 'lucide-react';
 
 /**

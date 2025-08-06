@@ -3,13 +3,14 @@
 import { surveyAPI } from '@/app/core/services/api';
 import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
 import { CmpButton, CmpInput, CmpSelect, CmpTextarea } from '@/app/shared/components/ui';
+import { useMutation } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
-import { toast } from '@/app/shared/utils/ui_com';
+import { alert, toast } from '@/app/shared/utils/ui_com';
 import {
-    ArrowLeft,
-    Plus,
-    Save,
-    Trash2
+  ArrowLeft,
+  Plus,
+  Save,
+  Trash2
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -70,8 +71,32 @@ export default function CreateSurveyPage() {
     { value: 'MULTIPLE_CHOICE', label: '다중선택' }
   ];
 
+  // 설문조사 생성 뮤테이션
+  const {
+    mutate: createSurveyMutation,
+    isLoading: createSurveyLoading,
+    error: createSurveyError
+  } = useMutation(
+    'create-survey',
+    (surveyData) => surveyAPI.createSurvey(surveyData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('설문조사가 성공적으로 생성되었습니다.');
+          setMoveTo('/admin/health-survey');
+        } else {
+          toast.callCommonToastOpen(response.message || '설문조사 생성에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('설문조사 생성 실패:', error);
+        toast.callCommonToastOpen('설문조사 생성 중 오류가 발생했습니다.');
+      }
+    }
+  );
+
   // 설문조사 생성
-  const createSurvey = async () => {
+  const createSurvey = () => {
     if (!surveyForm.surveyTtl.trim()) {
       toast.callCommonToastOpen('설문 제목을 입력해주세요.');
       return;
@@ -82,30 +107,28 @@ export default function CreateSurveyPage() {
       return;
     }
 
-    try {
-      const surveyData = {
-        ...surveyForm,
-        questions: questions
-      };
+    // 질문별 선택지 검증
+    const invalidQuestions = questions.filter(q =>
+      q.choices.filter(choice => !choice.choiceTtl.trim()).length > 0
+    );
 
-      console.log('전송할 설문조사 데이터:', surveyData);
-      console.log('질문 개수:', questions.length);
-      questions.forEach((q, i) => {
-        console.log(`질문 ${i + 1}:`, q);
-      });
-
-      const response = await surveyAPI.createSurvey(surveyData);
-
-      if (response.success) {
-        toast.callCommonToastOpen('설문조사가 생성되었습니다.');
-        setMoveTo('/admin/health-survey');
-      } else {
-        toast.callCommonToastOpen(response.message || '설문조사 생성에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('설문조사 생성 오류:', error);
-      toast.callCommonToastOpen('설문조사 생성에 실패했습니다.');
+    if (invalidQuestions.length > 0) {
+      toast.callCommonToastOpen('모든 질문의 선택지를 입력해주세요.');
+      return;
     }
+
+    const surveyData = {
+      ...surveyForm,
+      questions: questions
+    };
+
+    console.log('전송할 설문조사 데이터:', surveyData);
+    console.log('질문 개수:', questions.length);
+    questions.forEach((q, i) => {
+      console.log(`질문 ${i + 1}:`, q);
+    });
+
+    createSurveyMutation(surveyData);
   };
 
   // 질문 추가
@@ -172,11 +195,50 @@ export default function CreateSurveyPage() {
 
   // 뒤로가기
   const goBack = () => {
-    setMoveTo('/admin/health-survey');
+    if (questions.length > 0 || surveyForm.surveyTtl.trim()) {
+      alert.ConfirmOpen('페이지 이동', '작성 중인 내용이 있습니다. 정말로 나가시겠습니까?', {
+        okLabel: '나가기',
+        cancelLabel: '취소',
+        okCallback: () => {
+          setMoveTo('/admin/health-survey');
+        }
+      });
+    } else {
+      setMoveTo('/admin/health-survey');
+    }
+  };
+
+  // 에러 메시지 생성 함수
+  const getErrorMessage = (error) => {
+    if (!error) return '';
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    if (error.type === 'response') {
+      return `서버 오류 (${error.status}): ${error.message}`;
+    } else if (error.type === 'network') {
+      return '네트워크 연결 오류가 발생했습니다.';
+    } else if (error.type === 'request') {
+      return `요청 오류: ${error.message}`;
+    }
+
+    return error.message || '알 수 없는 오류가 발생했습니다.';
   };
 
   return (
     <PageWrapper>
+      {/* 에러 메시지 표시 */}
+      {createSurveyError && (
+        <div className="mb-6 p-4 bg-red-50 rounded border border-red-200">
+          <div className="font-medium text-red-800 mb-1">오류가 발생했습니다:</div>
+          <div className="text-sm text-red-600">
+            설문조사 생성: {getErrorMessage(createSurveyError)}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6">
         {/* 헤더 */}
         <div className="flex items-center justify-between">
@@ -185,6 +247,7 @@ export default function CreateSurveyPage() {
               onClick={goBack}
               variant="text"
               size="md"
+              disabled={createSurveyLoading}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               뒤로가기
@@ -199,6 +262,7 @@ export default function CreateSurveyPage() {
               onClick={goBack}
               variant="secondary"
               size="md"
+              disabled={createSurveyLoading}
             >
               취소
             </CmpButton>
@@ -206,10 +270,10 @@ export default function CreateSurveyPage() {
               onClick={createSurvey}
               variant="primary"
               size="md"
-              disabled={questions.length === 0}
+              disabled={questions.length === 0 || createSurveyLoading}
             >
               <Save className="w-4 h-4 mr-2" />
-              저장
+              {createSurveyLoading ? '저장 중...' : '저장'}
             </CmpButton>
           </div>
         </div>
@@ -228,6 +292,7 @@ export default function CreateSurveyPage() {
                   value={surveyForm.surveyTtl}
                   onChange={(e) => setSurveyForm({ ...surveyForm, surveyTtl: e.target.value })}
                   placeholder="설문 제목을 입력하세요"
+                  disabled={createSurveyLoading}
                 />
               </div>
 
@@ -240,6 +305,7 @@ export default function CreateSurveyPage() {
                   onChange={(e) => setSurveyForm({ ...surveyForm, surveyDesc: e.target.value })}
                   rows={3}
                   placeholder="설문에 대한 설명을 입력하세요"
+                  disabled={createSurveyLoading}
                 />
               </div>
 
@@ -252,6 +318,7 @@ export default function CreateSurveyPage() {
                     value={surveyForm.surveyTyCd}
                     onChange={(e) => setSurveyForm({ ...surveyForm, surveyTyCd: e.target.value })}
                     options={surveyTypeOptions}
+                    disabled={createSurveyLoading}
                   />
                 </div>
                 <div>
@@ -262,6 +329,7 @@ export default function CreateSurveyPage() {
                     value={surveyForm.surveyStsCd}
                     onChange={(value) => setSurveyForm({ ...surveyForm, surveyStsCd: value })}
                     options={surveyStatusOptions}
+                    disabled={createSurveyLoading}
                   />
                 </div>
               </div>
@@ -276,6 +344,7 @@ export default function CreateSurveyPage() {
                   onChange={(e) => setSurveyForm({ ...surveyForm, surveyDurMin: parseInt(e.target.value) || 15 })}
                   min="1"
                   max="120"
+                  disabled={createSurveyLoading}
                 />
               </div>
 
@@ -288,6 +357,7 @@ export default function CreateSurveyPage() {
                     type="date"
                     value={surveyForm.surveySttDt}
                     onChange={(e) => setSurveyForm({ ...surveyForm, surveySttDt: e.target.value })}
+                    disabled={createSurveyLoading}
                   />
                 </div>
                 <div>
@@ -298,6 +368,7 @@ export default function CreateSurveyPage() {
                     type="date"
                     value={surveyForm.surveyEndDt}
                     onChange={(e) => setSurveyForm({ ...surveyForm, surveyEndDt: e.target.value })}
+                    disabled={createSurveyLoading}
                   />
                 </div>
               </div>
@@ -314,6 +385,7 @@ export default function CreateSurveyPage() {
                         checked={surveyForm.anonymousYn === 'Y'}
                         onChange={(e) => setSurveyForm({ ...surveyForm, anonymousYn: e.target.checked ? 'Y' : 'N' })}
                         className="mr-2"
+                        disabled={createSurveyLoading}
                       />
                       익명 응답
                     </label>
@@ -323,6 +395,7 @@ export default function CreateSurveyPage() {
                         checked={surveyForm.duplicateYn === 'Y'}
                         onChange={(e) => setSurveyForm({ ...surveyForm, duplicateYn: e.target.checked ? 'Y' : 'N' })}
                         className="mr-2"
+                        disabled={createSurveyLoading}
                       />
                       중복 응답 허용
                     </label>
@@ -338,6 +411,7 @@ export default function CreateSurveyPage() {
                     onChange={(e) => setSurveyForm({ ...surveyForm, maxResponseCnt: e.target.value ? parseInt(e.target.value) : null })}
                     placeholder="제한 없음"
                     min="1"
+                    disabled={createSurveyLoading}
                   />
                 </div>
               </div>
@@ -371,6 +445,7 @@ export default function CreateSurveyPage() {
                       variant="textDanger"
                       size="sm"
                       title="삭제"
+                      disabled={createSurveyLoading}
                     >
                       <Trash2 className="w-4 h-4" />
                     </CmpButton>
@@ -392,6 +467,7 @@ export default function CreateSurveyPage() {
                     value={currentQuestion.questionTtl}
                     onChange={(e) => setCurrentQuestion({ ...currentQuestion, questionTtl: e.target.value })}
                     placeholder="질문을 입력하세요"
+                    disabled={createSurveyLoading}
                   />
                 </div>
 
@@ -404,6 +480,7 @@ export default function CreateSurveyPage() {
                     onChange={(e) => setCurrentQuestion({ ...currentQuestion, questionDesc: e.target.value })}
                     rows={2}
                     placeholder="질문에 대한 추가 설명"
+                    disabled={createSurveyLoading}
                   />
                 </div>
 
@@ -416,6 +493,7 @@ export default function CreateSurveyPage() {
                       value={currentQuestion.questionTyCd}
                       onChange={(value) => setCurrentQuestion({ ...currentQuestion, questionTyCd: value })}
                       options={questionTypeOptions}
+                      disabled={createSurveyLoading}
                     />
                   </div>
                   <div>
@@ -429,6 +507,7 @@ export default function CreateSurveyPage() {
                         { value: 'Y', label: '필수' },
                         { value: 'N', label: '선택' }
                       ]}
+                      disabled={createSurveyLoading}
                     />
                   </div>
                 </div>
@@ -446,6 +525,7 @@ export default function CreateSurveyPage() {
                           onChange={(e) => updateChoice(index, 'choiceTtl', e.target.value)}
                           placeholder={`선택지 ${index + 1}`}
                           className="flex-1"
+                          disabled={createSurveyLoading}
                         />
                         <CmpInput
                           type="number"
@@ -455,6 +535,7 @@ export default function CreateSurveyPage() {
                           className="w-16"
                           min="1"
                           max="10"
+                          disabled={createSurveyLoading}
                         />
                       </div>
                     ))}
@@ -466,7 +547,7 @@ export default function CreateSurveyPage() {
                   variant="primary"
                   size="md"
                   className="w-full"
-                  disabled={questions.length >= 18}
+                  disabled={questions.length >= 18 || createSurveyLoading}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   질문 추가

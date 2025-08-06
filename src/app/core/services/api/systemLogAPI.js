@@ -1,4 +1,4 @@
-import { api } from './apiClient';
+import { api } from '../apiClient';
 
 export const systemLogAPI = {
   // 시스템 로그 목록 조회 (페이징)

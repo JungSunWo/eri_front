@@ -3,22 +3,23 @@
 import { surveyAPI } from '@/app/core/services/api';
 import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
 import { CmpButton, CmpInput, CmpSelect } from '@/app/shared/components/ui';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
-import { toast } from '@/app/shared/utils/ui_com';
+import { alert, toast } from '@/app/shared/utils/ui_com';
 import {
-    AlertCircle,
-    BarChart3,
-    BarChartHorizontal,
-    Calendar,
-    CheckCircle,
-    Edit,
-    Eye,
-    FileText,
-    Plus,
-    Search,
-    Trash2,
-    Users,
-    XCircle
+  AlertCircle,
+  BarChart3,
+  BarChartHorizontal,
+  Calendar,
+  CheckCircle,
+  Edit,
+  Eye,
+  FileText,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+  XCircle
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -27,7 +28,6 @@ export default function HealthCheckManagementPage() {
 
   // 상태 관리
   const [surveys, setSurveys] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedSurvey, setSelectedSurvey] = useState(null);
   const [surveyResults, setSurveyResults] = useState(null);
@@ -66,82 +66,87 @@ export default function HealthCheckManagementPage() {
     { value: 'ETC', label: '기타' }
   ];
 
-  // 설문조사 목록 조회
-  const loadSurveys = async () => {
-    setLoading(true);
-    try {
-      const params = {
-        page: 1,
-        size: 100
-      };
-
-      // null이 아닌 값만 파라미터에 추가
-      if (searchKeyword && searchKeyword.trim() !== '') {
-        params.searchKeyword = searchKeyword;
-      }
-      if (filterStatus && filterStatus !== 'ALL') {
-        params.surveyStsCd = filterStatus;
-      }
-      if (filterType && filterType !== 'ALL') {
-        params.surveyTyCd = filterType;
-      }
-
-      console.log('설문조사 목록 조회 파라미터:', params);
-      const response = await surveyAPI.getSurveyList(params);
-      console.log('설문조사 목록 응답:', response);
-
-      if (response.success) {
-        // 백엔드에서 PageResponseDto를 반환하므로 content 배열을 가져옴
-        const surveyData = response.data?.content || response.data || [];
-        console.log('설문조사 데이터:', surveyData);
-        setSurveys(Array.isArray(surveyData) ? surveyData : []);
-      } else {
-        console.error('설문조사 목록 조회 실패:', response.message);
-        toast.callCommonToastOpen('설문조사 목록을 불러오는데 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('설문조사 목록 조회 오류:', error);
-      toast.callCommonToastOpen('설문조사 목록을 불러오는데 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
+  // Query parameters
+  const surveyQueryParams = {
+    page: 1,
+    size: 100,
+    ...(searchKeyword && searchKeyword.trim() !== '' && { searchKeyword }),
+    ...(filterStatus && filterStatus !== 'ALL' && { surveyStsCd: filterStatus }),
+    ...(filterType && filterType !== 'ALL' && { surveyTyCd: filterType })
   };
 
-  // 설문조사 삭제
-  const deleteSurvey = async (surveySeq) => {
-    if (!confirm('정말로 이 설문조사를 삭제하시겠습니까?')) {
-      return;
+  // 설문조사 목록 조회 쿼리
+  const {
+    data: surveyData,
+    isLoading: surveyLoading,
+    error: surveyError,
+    refetch: refetchSurveys
+  } = useQuery(
+    ['survey-list', surveyQueryParams],
+    () => surveyAPI.getSurveyList(surveyQueryParams),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false
     }
+  );
 
-    try {
-      const response = await surveyAPI.deleteSurvey(surveySeq);
-      if (response.success) {
-        toast.callCommonToastOpen('설문조사가 삭제되었습니다.');
-        loadSurveys();
-      } else {
-        toast.callCommonToastOpen('설문조사 삭제에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('설문조사 삭제 오류:', error);
-      toast.callCommonToastOpen('설문조사 삭제에 실패했습니다.');
+  // 설문조사 삭제 뮤테이션
+  const {
+    mutate: deleteSurveyMutation,
+    isLoading: deleteSurveyLoading,
+    error: deleteSurveyError
+  } = useMutation(
+    'delete-survey',
+    (surveySeq) => surveyAPI.deleteSurvey(surveySeq),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('설문조사가 성공적으로 삭제되었습니다.');
+          refetchSurveys();
+        } else {
+          toast.callCommonToastOpen(response.message || '설문조사 삭제에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('설문조사 삭제 실패:', error);
+        toast.callCommonToastOpen('설문조사 삭제 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['survey-list']]
     }
-  };
+  );
 
-  // 설문조사 결과 조회
-  const loadSurveyResults = async (surveySeq) => {
-    try {
-      const response = await surveyAPI.getSurveyResults(surveySeq);
-      if (response.success) {
-        setSurveyResults(response.data);
-        setShowResultModal(true);
-      } else {
+  // 설문조사 결과 조회 뮤테이션
+  const {
+    mutate: getSurveyResultsMutation,
+    isLoading: getSurveyResultsLoading,
+    error: getSurveyResultsError
+  } = useMutation(
+    'get-survey-results',
+    (surveySeq) => surveyAPI.getSurveyResults(surveySeq),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          setSurveyResults(response.data);
+          setShowResultModal(true);
+        } else {
+          toast.callCommonToastOpen('설문조사 결과를 불러오는데 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('설문조사 결과 조회 실패:', error);
         toast.callCommonToastOpen('설문조사 결과를 불러오는데 실패했습니다.');
       }
-    } catch (error) {
-      console.error('설문조사 결과 조회 오류:', error);
-      toast.callCommonToastOpen('설문조사 결과를 불러오는데 실패했습니다.');
     }
-  };
+  );
+
+  // 데이터 설정
+  useEffect(() => {
+    if (surveyData?.success) {
+      const surveyList = surveyData.data?.content || surveyData.data || [];
+      setSurveys(Array.isArray(surveyList) ? surveyList : []);
+    }
+  }, [surveyData]);
 
   // 설문조사 상세보기
   const viewSurvey = (survey) => {
@@ -164,7 +169,45 @@ export default function HealthCheckManagementPage() {
 
   // 검색 실행
   const handleSearch = () => {
-    loadSurveys();
+    // Query will automatically refetch when parameters change
+  };
+
+  // 설문조사 삭제
+  const deleteSurvey = (surveySeq) => {
+    alert.ConfirmOpen('설문조사 삭제', '정말로 이 설문조사를 삭제하시겠습니까?', {
+      okLabel: '삭제',
+      cancelLabel: '취소',
+      okCallback: () => {
+        deleteSurveyMutation(surveySeq);
+      }
+    });
+  };
+
+  // 설문조사 결과 조회
+  const loadSurveyResults = (surveySeq) => {
+    getSurveyResultsMutation(surveySeq);
+  };
+
+  // 로딩 상태 통합
+  const loading = surveyLoading || deleteSurveyLoading || getSurveyResultsLoading;
+
+  // 에러 메시지 생성 함수
+  const getErrorMessage = (error) => {
+    if (!error) return '';
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    if (error.type === 'response') {
+      return `서버 오류 (${error.status}): ${error.message}`;
+    } else if (error.type === 'network') {
+      return '네트워크 연결 오류가 발생했습니다.';
+    } else if (error.type === 'request') {
+      return `요청 오류: ${error.message}`;
+    }
+
+    return error.message || '알 수 없는 오류가 발생했습니다.';
   };
 
   // 상태 아이콘 반환
@@ -217,12 +260,20 @@ export default function HealthCheckManagementPage() {
     return option ? option.label : status;
   };
 
-  useEffect(() => {
-    loadSurveys();
-  }, []);
-
   return (
     <PageWrapper>
+      {/* 에러 메시지 표시 */}
+      {(surveyError || deleteSurveyError || getSurveyResultsError) && (
+        <div className="mb-6 p-4 bg-red-50 rounded border border-red-200">
+          <div className="font-medium text-red-800 mb-1">오류가 발생했습니다:</div>
+          <div className="text-sm text-red-600">
+            {surveyError && <div>설문조사 목록: {getErrorMessage(surveyError)}</div>}
+            {deleteSurveyError && <div>설문조사 삭제: {getErrorMessage(deleteSurveyError)}</div>}
+            {getSurveyResultsError && <div>설문조사 결과 조회: {getErrorMessage(getSurveyResultsError)}</div>}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6">
         {/* 헤더 */}
         <div className="flex items-center justify-between">
@@ -234,6 +285,7 @@ export default function HealthCheckManagementPage() {
             onClick={() => setMoveTo('/admin/health-survey/create')}
             variant="primary"
             size="md"
+            disabled={loading}
           >
             <Plus className="w-4 h-4 mr-2" />
             새 설문조사 등록
@@ -248,6 +300,7 @@ export default function HealthCheckManagementPage() {
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
                 placeholder="설문 제목 검색"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
               />
             </div>
             <div>
@@ -270,6 +323,7 @@ export default function HealthCheckManagementPage() {
                 variant="primary"
                 size="md"
                 className="w-full"
+                disabled={loading}
               >
                 <Search className="w-4 h-4 mr-2" />
                 검색
@@ -372,6 +426,7 @@ export default function HealthCheckManagementPage() {
                             variant="textPrimary"
                             size="sm"
                             title="상세보기"
+                            disabled={loading}
                           >
                             <Eye className="w-4 h-4" />
                           </CmpButton>
@@ -380,6 +435,7 @@ export default function HealthCheckManagementPage() {
                             variant="textSuccess"
                             size="sm"
                             title="수정"
+                            disabled={loading}
                           >
                             <Edit className="w-4 h-4" />
                           </CmpButton>
@@ -388,6 +444,7 @@ export default function HealthCheckManagementPage() {
                             variant="textInfo"
                             size="sm"
                             title="결과보기"
+                            disabled={loading}
                           >
                             <BarChartHorizontal className="w-4 h-4" />
                           </CmpButton>
@@ -396,6 +453,7 @@ export default function HealthCheckManagementPage() {
                             variant="text"
                             size="sm"
                             title="결과보기"
+                            disabled={loading}
                           >
                             <BarChart3 className="w-4 h-4" />
                           </CmpButton>
@@ -404,6 +462,7 @@ export default function HealthCheckManagementPage() {
                             variant="textDanger"
                             size="sm"
                             title="삭제"
+                            disabled={loading}
                           >
                             <Trash2 className="w-4 h-4" />
                           </CmpButton>

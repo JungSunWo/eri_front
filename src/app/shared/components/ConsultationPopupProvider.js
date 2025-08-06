@@ -1,6 +1,6 @@
 'use client';
 
-import { useConsultationPopupStore } from '@/app/core/slices/consultationPopupStore';
+import { useConsultationPopupStore } from '@/slices/consultationPopupStore';
 import ConsultationPopup from './ConsultationPopup';
 
 const ConsultationPopupProvider = ({ children }) => {

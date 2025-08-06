@@ -1,12 +1,36 @@
 'use client';
 
-import { setMoveTo } from '@/app/core/slices/pageMoveStore';
-import CmpButton from '@/app/shared/components/button/cmp_button';
+import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function ConsultationSelectionPage() {
+  const setMoveTo = usePageMoveStore((state) => state.setMoveTo);
+  const searchParams = useSearchParams();
   const [selectedType, setSelectedType] = useState('expert');
+
+  // URL 파라미터에서 상담 유형 읽기
+  useEffect(() => {
+    const typeFromUrl = searchParams.get('type');
+    console.log('URL 파라미터 확인:', typeFromUrl);
+
+    if (typeFromUrl) {
+      console.log('URL에서 받은 상담 유형:', typeFromUrl);
+      console.log('유효한 상담 유형인지 확인:', consultationTypes.find(type => type.id === typeFromUrl));
+
+      // 유효한 상담 유형인지 확인
+      const validType = consultationTypes.find(type => type.id === typeFromUrl);
+      if (validType) {
+        console.log('유효한 상담 유형이므로 선택 상태로 설정:', typeFromUrl);
+        setSelectedType(typeFromUrl);
+      } else {
+        console.log('유효하지 않은 상담 유형:', typeFromUrl);
+      }
+    } else {
+      console.log('URL 파라미터가 없음, 기본값 사용');
+    }
+  }, [searchParams]);
 
   const consultationTypes = [
     {
@@ -28,7 +52,7 @@ export default function ConsultationSelectionPage() {
       process: '상담글 작성 -> 상담사 확인 후 답글 게재'
     },
     {
-      id: 'kakao',
+      id: 'kakao-open',
       title: '카카오톡 오픈채팅 상담',
       description: '긴급한 상담이 필요한 경우 아래 QR을 통해 오픈채팅을 요청해 주세요.',
       process: 'QR 스캔 -> 채팅방 입장 -> 실시간 상담'
@@ -36,25 +60,35 @@ export default function ConsultationSelectionPage() {
   ];
 
   const handleConsultationSelect = (typeId) => {
+    console.log('라디오 버튼 선택됨:', typeId);
+    console.log('이전 선택 상태:', selectedType);
     setSelectedType(typeId);
+    console.log('새로운 선택 상태로 설정됨:', typeId);
   };
 
   const handleReservation = () => {
+    console.log('신청하기 버튼 클릭됨, 선택된 상담 유형:', selectedType);
+
     // 선택된 상담 유형에 따라 해당 페이지로 이동
     switch (selectedType) {
       case 'expert':
+        console.log('전문가 상담 페이지로 이동');
         setMoveTo('/consultation/expert');
         break;
       case 'psychological':
+        console.log('심리검사 및 해석상담 페이지로 이동');
         setMoveTo('/consultation/psychological');
         break;
       case 'board':
+        console.log('게시판 상담 페이지로 이동');
         setMoveTo('/consultation/board');
         break;
-      case 'kakao':
-        setMoveTo('/consultation/kakao');
+      case 'kakao-open':
+        console.log('카카오톡 오픈채팅 상담 페이지로 이동');
+        setMoveTo('/consultation/kakao-open');
         break;
       default:
+        console.log('알 수 없는 상담 유형:', selectedType);
         break;
     }
   };
@@ -63,59 +97,85 @@ export default function ConsultationSelectionPage() {
 
   return (
     <PageWrapper title="상담 선택하기">
-      <div className="flex h-full">
-        {/* 왼쪽 상담 유형 선택 */}
-        <div className="w-1/3 p-6 border-r border-gray-200">
-          <div className="space-y-4">
-            {consultationTypes.map((type) => (
-              <div
-                key={type.id}
-                className={`p-4 rounded-lg cursor-pointer transition-all ${selectedType === type.id
-                    ? 'bg-gray-100 border-2 border-blue-500'
-                    : 'bg-white border border-gray-200 hover:bg-gray-50'
-                  }`}
-                onClick={() => handleConsultationSelect(type.id)}
-              >
-                <h3 className="font-semibold text-gray-900">{type.title}</h3>
-              </div>
-            ))}
-          </div>
+      <div className="max-w-4xl mx-auto p-6">
+        {/* 디버깅 정보 */}
+        <div className="mb-4 p-2 bg-yellow-100 text-sm">
+          현재 선택된 상담 유형: {selectedType} ({selectedConsultation?.title})
         </div>
+                 {/* 상담 유형 선택 (라디오 버튼) */}
+         <div className="mb-8">
+           <div className="flex space-x-8">
+                           {consultationTypes.map((type) => {
+                const isSelected = selectedType === type.id;
+                console.log(`라디오 버튼 렌더링 - ${type.id}: 선택됨=${isSelected}`);
 
-        {/* 오른쪽 상세 정보 */}
-        <div className="flex-1 p-6">
-          <div className="h-full flex flex-col">
-            {/* 설명 영역 */}
-            <div className="flex-1">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                return (
+                  <label
+                    key={type.id}
+                    className={`flex items-center cursor-pointer p-3 rounded-lg transition-all ${
+                      isSelected
+                        ? 'bg-blue-50 border-2 border-blue-500'
+                        : 'bg-white border-2 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                                     <input
+                      type="radio"
+                      name="consultationType"
+                      value={type.id}
+                      checked={isSelected}
+                      onChange={() => handleConsultationSelect(type.id)}
+                      className="mr-3"
+                    />
+                    <span className={`font-medium ${
+                      isSelected ? 'text-blue-700' : 'text-gray-700'
+                    }`}>
+                      {type.title}
+                    </span>
+                  </label>
+                );
+              })}
+           </div>
+         </div>
+
+        {/* 설명 및 프로세스 안내 영역 */}
+        <div className="mb-8">
+          <div className="border border-gray-200 rounded-lg p-6 bg-white">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              설명 및 프로세스 안내
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">
                   {selectedConsultation?.title}
-                </h2>
-                <p className="text-gray-700 leading-relaxed mb-6">
+                </h4>
+                <p className="text-gray-700 leading-relaxed">
                   {selectedConsultation?.description}
                 </p>
               </div>
-
-              {/* 프로세스 영역 */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-medium text-gray-900 mb-2">진행 과정</h3>
+              <div className="pt-4 border-t border-gray-200">
+                <h4 className="font-medium text-gray-900 mb-2">진행 과정</h4>
                 <p className="text-sm text-gray-600">
                   {selectedConsultation?.process}
                 </p>
               </div>
             </div>
-
-            {/* 예약 버튼 */}
-            <div className="mt-6">
-              <CmpButton
-                label="상담예약"
-                styleType="primary"
-                click={handleReservation}
-                className="w-full py-3 text-lg"
-              />
-            </div>
           </div>
         </div>
+
+                 {/* 신청하기 버튼 */}
+         <div className="text-center">
+           <button
+             onClick={handleReservation}
+             disabled={!selectedType}
+             className={`font-semibold py-3 px-8 rounded-lg text-lg transition-colors duration-200 w-full max-w-md ${
+               selectedType
+                 ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+             }`}
+           >
+             신청하기
+           </button>
+         </div>
       </div>
     </PageWrapper>
   );

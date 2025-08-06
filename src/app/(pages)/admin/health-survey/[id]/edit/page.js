@@ -3,15 +3,16 @@
 import { surveyAPI } from '@/app/core/services/api';
 import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
 import { CmpButton, CmpInput, CmpSelect, CmpTextarea } from '@/app/shared/components/ui';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
-import { toast } from '@/app/shared/utils/ui_com';
+import { alert, toast } from '@/app/shared/utils/ui_com';
 import {
-    ArrowLeft,
-    Edit,
-    Plus,
-    Save,
-    Trash2,
-    X
+  ArrowLeft,
+  Edit,
+  Plus,
+  Save,
+  Trash2,
+  X
 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -22,7 +23,6 @@ export default function EditSurveyPage() {
   const surveySeq = params.id;
 
   // 상태 관리
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   // 폼 데이터
@@ -80,70 +80,99 @@ export default function EditSurveyPage() {
     { value: 'OTHER', label: '기타' }
   ];
 
-  // 설문조사 상세 조회
-  const loadSurveyDetail = async () => {
-    setLoading(true);
-    try {
-      const response = await surveyAPI.getSurveyDetail(surveySeq);
-      if (response.success) {
-        const survey = response.data;
+  // 설문조사 상세 조회 쿼리
+  const {
+    data: surveyData,
+    isLoading: surveyLoading,
+    error: surveyError,
+    refetch: refetchSurvey
+  } = useQuery(
+    ['survey-detail', surveySeq],
+    () => surveyAPI.getSurveyDetail(surveySeq),
+    {
+      cacheTime: 5 * 60 * 1000, // 5분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+      enabled: !!surveySeq
+    }
+  );
 
-        // 폼 데이터 설정
-        setSurveyForm({
-          surveyTtl: survey.surveyTtl,
-          surveyDesc: survey.surveyDesc || '',
-          surveyTyCd: survey.surveyTyCd,
-          surveyStsCd: survey.surveyStsCd || 'DRAFT',
-          surveySttDt: survey.surveySttDt ? survey.surveySttDt.split('T')[0] : '',
-          surveyEndDt: survey.surveyEndDt ? survey.surveyEndDt.split('T')[0] : '',
-          surveyDurMin: survey.surveyDurMin || 15,
-          anonymousYn: survey.anonymousYn || 'N',
-          duplicateYn: survey.duplicateYn || 'N',
-          maxResponseCnt: survey.maxResponseCnt,
-          targetEmpTyCd: survey.targetEmpTyCd || 'ALL'
-        });
-
-        // 질문 데이터 설정
-        setQuestions(survey.questions || []);
-      } else {
-        toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
-        setMoveTo('/admin/health-survey');
+  // 설문조사 수정 뮤테이션
+  const {
+    mutate: updateSurveyMutation,
+    isLoading: updateSurveyLoading,
+    error: updateSurveyError
+  } = useMutation(
+    'update-survey',
+    (surveyData) => surveyAPI.updateSurvey(surveySeq, surveyData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('설문조사가 성공적으로 수정되었습니다.');
+          setMoveTo(`/admin/health-survey/${surveySeq}`);
+        } else {
+          toast.callCommonToastOpen(response.message || '설문조사 수정에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('설문조사 수정 실패:', error);
+        toast.callCommonToastOpen('설문조사 수정 중 오류가 발생했습니다.');
       }
-    } catch (error) {
-      console.error('설문조사 상세 조회 오류:', error);
+    }
+  );
+
+  // 데이터 설정
+  useEffect(() => {
+    if (surveyData?.success) {
+      const survey = surveyData.data;
+
+      // 폼 데이터 설정
+      setSurveyForm({
+        surveyTtl: survey.surveyTtl,
+        surveyDesc: survey.surveyDesc || '',
+        surveyTyCd: survey.surveyTyCd,
+        surveyStsCd: survey.surveyStsCd || 'DRAFT',
+        surveySttDt: survey.surveySttDt ? survey.surveySttDt.split('T')[0] : '',
+        surveyEndDt: survey.surveyEndDt ? survey.surveyEndDt.split('T')[0] : '',
+        surveyDurMin: survey.surveyDurMin || 15,
+        anonymousYn: survey.anonymousYn || 'N',
+        duplicateYn: survey.duplicateYn || 'N',
+        maxResponseCnt: survey.maxResponseCnt,
+        targetEmpTyCd: survey.targetEmpTyCd || 'ALL'
+      });
+
+      // 질문 데이터 설정
+      setQuestions(survey.questions || []);
+    } else if (surveyData && !surveyData.success) {
+      console.error('설문조사 상세 조회 실패:', surveyData.message);
       toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
       setMoveTo('/admin/health-survey');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [surveyData, setMoveTo]);
 
   // 설문조사 수정
-  const updateSurvey = async () => {
+  const updateSurvey = () => {
     if (!surveyForm.surveyTtl.trim()) {
       toast.callCommonToastOpen('설문 제목을 입력해주세요.');
       return;
     }
 
-    setSaving(true);
-    try {
-      const response = await surveyAPI.updateSurvey(surveySeq, {
-        ...surveyForm,
-        questions: questions
-      });
+    // 질문별 선택지 검증
+    const invalidQuestions = questions.filter(q =>
+      q.choices.filter(choice => !choice.choiceTtl.trim()).length > 0
+    );
 
-      if (response.success) {
-        toast.callCommonToastOpen('설문조사가 수정되었습니다.');
-        setMoveTo(`/admin/health-survey/${surveySeq}`);
-      } else {
-        toast.callCommonToastOpen(response.message || '설문조사 수정에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('설문조사 수정 오류:', error);
-      toast.callCommonToastOpen('설문조사 수정에 실패했습니다.');
-    } finally {
-      setSaving(false);
+    if (invalidQuestions.length > 0) {
+      toast.callCommonToastOpen('모든 질문의 선택지를 입력해주세요.');
+      return;
     }
+
+    const surveyData = {
+      ...surveyForm,
+      questions: questions
+    };
+
+    updateSurveyMutation(surveyData);
   };
 
   // 질문 추가
@@ -262,28 +291,42 @@ export default function EditSurveyPage() {
 
   // 뒤로가기
   const goBack = () => {
-    setMoveTo('/admin/health-survey');
+    if (questions.length > 0 || surveyForm.surveyTtl.trim()) {
+      alert.ConfirmOpen('페이지 이동', '작성 중인 내용이 있습니다. 정말로 나가시겠습니까?', {
+        okLabel: '나가기',
+        cancelLabel: '취소',
+        okCallback: () => {
+          setMoveTo('/admin/health-survey');
+        }
+      });
+    } else {
+      setMoveTo('/admin/health-survey');
+    }
   };
 
-  // 컴포넌트 마운트 시 설문조사 상세 조회
-  useEffect(() => {
-    if (surveySeq) {
-      loadSurveyDetail();
-    }
-  }, [surveySeq]);
+  // 에러 메시지 생성 함수
+  const getErrorMessage = (error) => {
+    if (!error) return '';
 
-  // 질문 수정 모드 활성화 시 포커스 이동
-  useEffect(() => {
-    if (isEditingQuestion && questionTitleRef.current) {
-      console.log('useEffect에서 포커스 이동 시도');
-      setTimeout(() => {
-        questionTitleRef.current.focus();
-        console.log('useEffect에서 포커스 이동 완료');
-      }, 50);
+    if (typeof error === 'string') {
+      return error;
     }
-  }, [isEditingQuestion]);
 
-  if (loading) {
+    if (error.type === 'response') {
+      return `서버 오류 (${error.status}): ${error.message}`;
+    } else if (error.type === 'network') {
+      return '네트워크 연결 오류가 발생했습니다.';
+    } else if (error.type === 'request') {
+      return `요청 오류: ${error.message}`;
+    }
+
+    return error.message || '알 수 없는 오류가 발생했습니다.';
+  };
+
+  // 로딩 상태 통합
+  const loading = surveyLoading || updateSurveyLoading;
+
+  if (surveyLoading) {
     return (
       <PageWrapper>
         <div className="flex items-center justify-center min-h-64">
@@ -294,8 +337,42 @@ export default function EditSurveyPage() {
     );
   }
 
+  if (surveyError) {
+    return (
+      <PageWrapper>
+        <div className="mb-6 p-4 bg-red-50 rounded border border-red-200">
+          <div className="font-medium text-red-800 mb-1">오류가 발생했습니다:</div>
+          <div className="text-sm text-red-600">
+            설문조사 상세 조회: {getErrorMessage(surveyError)}
+          </div>
+        </div>
+        <div className="text-center py-8">
+          <p className="text-gray-500">설문조사를 불러오는데 실패했습니다.</p>
+          <CmpButton
+            onClick={goBack}
+            variant="primary"
+            size="md"
+            className="mt-4"
+          >
+            목록으로 돌아가기
+          </CmpButton>
+        </div>
+      </PageWrapper>
+    );
+  }
+
   return (
     <PageWrapper>
+      {/* 에러 메시지 표시 */}
+      {updateSurveyError && (
+        <div className="mb-6 p-4 bg-red-50 rounded border border-red-200">
+          <div className="font-medium text-red-800 mb-1">오류가 발생했습니다:</div>
+          <div className="text-sm text-red-600">
+            설문조사 수정: {getErrorMessage(updateSurveyError)}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6">
         {/* 헤더 */}
         <div className="flex items-center justify-between">
@@ -304,6 +381,7 @@ export default function EditSurveyPage() {
               onClick={goBack}
               variant="text"
               size="md"
+              disabled={loading}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               뒤로가기
@@ -318,6 +396,7 @@ export default function EditSurveyPage() {
               onClick={goBack}
               variant="secondary"
               size="md"
+              disabled={loading}
             >
               취소
             </CmpButton>
@@ -325,10 +404,10 @@ export default function EditSurveyPage() {
               onClick={updateSurvey}
               variant="primary"
               size="md"
-              disabled={saving}
+              disabled={loading}
             >
               <Save className="w-4 h-4 mr-2" />
-              {saving ? '저장 중...' : '저장'}
+              {updateSurveyLoading ? '저장 중...' : '저장'}
             </CmpButton>
           </div>
         </div>
@@ -347,6 +426,7 @@ export default function EditSurveyPage() {
                   value={surveyForm.surveyTtl}
                   onChange={(e) => setSurveyForm({ ...surveyForm, surveyTtl: e.target.value })}
                   placeholder="설문 제목을 입력하세요"
+                  disabled={loading}
                 />
               </div>
 
@@ -359,6 +439,7 @@ export default function EditSurveyPage() {
                   onChange={(e) => setSurveyForm({ ...surveyForm, surveyDesc: e.target.value })}
                   rows={3}
                   placeholder="설문에 대한 설명을 입력하세요"
+                  disabled={loading}
                 />
               </div>
 
@@ -371,6 +452,7 @@ export default function EditSurveyPage() {
                     value={surveyForm.surveyTyCd}
                     onChange={(e) => setSurveyForm({ ...surveyForm, surveyTyCd: e.target.value })}
                     options={surveyTypeOptions}
+                    disabled={loading}
                   />
                 </div>
                 <div>
@@ -381,6 +463,7 @@ export default function EditSurveyPage() {
                     value={surveyForm.surveyStsCd}
                     onChange={(value) => setSurveyForm({ ...surveyForm, surveyStsCd: value })}
                     options={surveyStatusOptions}
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -395,6 +478,7 @@ export default function EditSurveyPage() {
                   onChange={(e) => setSurveyForm({ ...surveyForm, surveyDurMin: parseInt(e.target.value) || 15 })}
                   min="1"
                   max="120"
+                  disabled={loading}
                 />
               </div>
 
@@ -407,6 +491,7 @@ export default function EditSurveyPage() {
                     type="date"
                     value={surveyForm.surveySttDt}
                     onChange={(e) => setSurveyForm({ ...surveyForm, surveySttDt: e.target.value })}
+                    disabled={loading}
                   />
                 </div>
                 <div>
@@ -417,6 +502,7 @@ export default function EditSurveyPage() {
                     type="date"
                     value={surveyForm.surveyEndDt}
                     onChange={(e) => setSurveyForm({ ...surveyForm, surveyEndDt: e.target.value })}
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -433,6 +519,7 @@ export default function EditSurveyPage() {
                         checked={surveyForm.anonymousYn === 'Y'}
                         onChange={(e) => setSurveyForm({ ...surveyForm, anonymousYn: e.target.checked ? 'Y' : 'N' })}
                         className="mr-2"
+                        disabled={loading}
                       />
                       익명 응답
                     </label>
@@ -442,6 +529,7 @@ export default function EditSurveyPage() {
                         checked={surveyForm.duplicateYn === 'Y'}
                         onChange={(e) => setSurveyForm({ ...surveyForm, duplicateYn: e.target.checked ? 'Y' : 'N' })}
                         className="mr-2"
+                        disabled={loading}
                       />
                       중복 응답 허용
                     </label>
@@ -457,6 +545,7 @@ export default function EditSurveyPage() {
                     onChange={(e) => setSurveyForm({ ...surveyForm, maxResponseCnt: e.target.value ? parseInt(e.target.value) : null })}
                     placeholder="제한 없음"
                     min="1"
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -487,6 +576,7 @@ export default function EditSurveyPage() {
                         variant="text"
                         size="sm"
                         title="수정"
+                        disabled={loading}
                       >
                         <Edit className="w-4 h-4" />
                       </CmpButton>
@@ -495,6 +585,7 @@ export default function EditSurveyPage() {
                         variant="textDanger"
                         size="sm"
                         title="삭제"
+                        disabled={loading}
                       >
                         <Trash2 className="w-4 h-4" />
                       </CmpButton>
@@ -514,6 +605,7 @@ export default function EditSurveyPage() {
                     onClick={cancelEditQuestion}
                     variant="text"
                     size="sm"
+                    disabled={loading}
                   >
                     <X className="w-4 h-4" />
                   </CmpButton>
@@ -529,6 +621,7 @@ export default function EditSurveyPage() {
                       value={currentQuestion.questionTtl}
                       onChange={(e) => setCurrentQuestion({ ...currentQuestion, questionTtl: e.target.value })}
                       placeholder="질문을 입력하세요"
+                      disabled={loading}
                     />
                   </div>
 
@@ -541,6 +634,7 @@ export default function EditSurveyPage() {
                       onChange={(e) => setCurrentQuestion({ ...currentQuestion, questionDesc: e.target.value })}
                       rows={2}
                       placeholder="질문에 대한 추가 설명"
+                      disabled={loading}
                     />
                   </div>
 
@@ -553,6 +647,7 @@ export default function EditSurveyPage() {
                         value={currentQuestion.questionTyCd}
                         onChange={(value) => setCurrentQuestion({ ...currentQuestion, questionTyCd: value })}
                         options={questionTypeOptions}
+                        disabled={loading}
                       />
                     </div>
                     <div>
@@ -566,6 +661,7 @@ export default function EditSurveyPage() {
                           { value: 'Y', label: '필수' },
                           { value: 'N', label: '선택' }
                         ]}
+                        disabled={loading}
                       />
                     </div>
                   </div>
@@ -583,6 +679,7 @@ export default function EditSurveyPage() {
                             onChange={(e) => updateChoice(choiceIndex, 'choiceTtl', e.target.value)}
                             placeholder={`선택지 ${choiceIndex + 1}`}
                             className="flex-1"
+                            disabled={loading}
                           />
                           <CmpInput
                             type="number"
@@ -590,6 +687,7 @@ export default function EditSurveyPage() {
                             onChange={(e) => updateChoice(choiceIndex, 'choiceScore', parseInt(e.target.value) || 0)}
                             placeholder="점수"
                             className="w-20"
+                            disabled={loading}
                           />
                         </div>
                       ))}
@@ -597,8 +695,8 @@ export default function EditSurveyPage() {
                   </div>
 
                   <div className="flex justify-end space-x-2 pt-2">
-                    <CmpButton onClick={cancelEditQuestion} variant="secondary" size="sm">취소</CmpButton>
-                    <CmpButton onClick={saveEditQuestion} variant="primary" size="sm">수정 완료</CmpButton>
+                    <CmpButton onClick={cancelEditQuestion} variant="secondary" size="sm" disabled={loading}>취소</CmpButton>
+                    <CmpButton onClick={saveEditQuestion} variant="primary" size="sm" disabled={loading}>수정 완료</CmpButton>
                   </div>
                 </div>
               </div>
@@ -618,6 +716,7 @@ export default function EditSurveyPage() {
                       value={currentQuestion.questionTtl}
                       onChange={(e) => setCurrentQuestion({ ...currentQuestion, questionTtl: e.target.value })}
                       placeholder="질문을 입력하세요"
+                      disabled={loading}
                     />
                   </div>
 
@@ -630,6 +729,7 @@ export default function EditSurveyPage() {
                       onChange={(e) => setCurrentQuestion({ ...currentQuestion, questionDesc: e.target.value })}
                       rows={2}
                       placeholder="질문에 대한 추가 설명"
+                      disabled={loading}
                     />
                   </div>
 
@@ -642,6 +742,7 @@ export default function EditSurveyPage() {
                         value={currentQuestion.questionTyCd}
                         onChange={(value) => setCurrentQuestion({ ...currentQuestion, questionTyCd: value })}
                         options={questionTypeOptions}
+                        disabled={loading}
                       />
                     </div>
                     <div>
@@ -655,6 +756,7 @@ export default function EditSurveyPage() {
                           { value: 'Y', label: '필수' },
                           { value: 'N', label: '선택' }
                         ]}
+                        disabled={loading}
                       />
                     </div>
                   </div>
@@ -672,6 +774,7 @@ export default function EditSurveyPage() {
                             onChange={(e) => updateChoice(index, 'choiceTtl', e.target.value)}
                             placeholder={`선택지 ${index + 1}`}
                             className="flex-1"
+                            disabled={loading}
                           />
                           <CmpInput
                             type="number"
@@ -681,6 +784,7 @@ export default function EditSurveyPage() {
                             className="w-16"
                             min="1"
                             max="10"
+                            disabled={loading}
                           />
                         </div>
                       ))}
@@ -692,7 +796,7 @@ export default function EditSurveyPage() {
                     variant="primary"
                     size="md"
                     className="w-full"
-                    disabled={questions.length >= 18}
+                    disabled={questions.length >= 18 || loading}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     질문 추가

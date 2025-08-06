@@ -1,13 +1,13 @@
 'use client';
 
-import { noticeAPI } from '@/app/core/services/api';
-import { useQuery } from '@/app/core/services/useQuery';
-import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
-import Board from '@/app/shared/components/Board';
-import EmpNameDisplay from '@/app/shared/components/EmpNameDisplay';
-import CmpInput from '@/app/shared/components/ui/CmpInput';
-import CmpSelect from '@/app/shared/components/ui/CmpSelect';
-import PageWrapper from '@/app/shared/layouts/PageWrapper';
+import { useQuery } from '@/app/shared/hooks/useQuery';
+import Board from '@/components/Board';
+import EmpNameDisplay from '@/components/EmpNameDisplay';
+import CmpInput from '@/components/ui/CmpInput';
+import CmpSelect from '@/components/ui/CmpSelect';
+import PageWrapper from '@/layouts/PageWrapper';
+import { noticeAPI } from '@/services/api';
+import { usePageMoveStore } from '@/slices/pageMoveStore';
 import { useCallback, useEffect, useState } from 'react';
 
 const columns = [
@@ -31,33 +31,36 @@ export default function NoticePage() {
     const [detail, setDetail] = useState(null);
     const setMoveTo = usePageMoveStore((state) => state.setMoveTo);
 
-    // RTK Query를 사용한 목록 조회
+    // 목록 조회 쿼리 파라미터
+    const listQueryParams = {
+        page,
+        size,
+        sortKey,
+        sortOrder,
+        searchKeyword: search,
+        searchField,
+        startDate,
+        endDate,
+        stsCd: 'STS001', // 직원화면에서는 STS001(활성) 상태만 노출
+    };
+
+    // Zustand Query를 사용한 목록 조회
     const {
         data: listData,
         isLoading: listLoading,
         error: listError,
         refetch: refetchList
     } = useQuery(
-        ['notice-list', page, size, sortKey, sortOrder, search, searchField, startDate, endDate, stsCd],
-        () => noticeAPI.getNoticePage({
-            page,
-            size,
-            sortKey,
-            sortOrder,
-            searchKeyword: search,
-            searchField,
-            startDate,
-            endDate,
-            stsCd: 'STS001', // 직원화면에서는 STS001(활성) 상태만 노출
-        }),
+        ['notice-list', listQueryParams],
+        () => noticeAPI.getNoticePage(listQueryParams),
         {
             cacheTime: 5 * 60 * 1000, // 5분 캐시
             retry: 3,
-            enabled: !selected, // 선택된 항목이 없을 때만 실행
+            refetchOnWindowFocus: false, // 윈도우 포커스 시 자동 리페치 비활성화
         }
     );
 
-    // RTK Query를 사용한 상세 조회
+    // Zustand Query를 사용한 상세 조회
     const {
         data: detailData,
         isLoading: detailLoading,
@@ -65,7 +68,7 @@ export default function NoticePage() {
         refetch: refetchDetail
     } = useQuery(
         ['notice-detail', selected],
-        () => fetch(`/resources/notice/${selected}`).then(res => res.json()),
+        () => noticeAPI.getNoticeDetail(selected),
         {
             cacheTime: 10 * 60 * 1000, // 10분 캐시
             retry: 2,
@@ -103,8 +106,8 @@ export default function NoticePage() {
     const handleSearch = useCallback((e) => {
         e.preventDefault();
         setPage(1);
-        refetchList();
-    }, [refetchList]);
+        // refetchList() 호출 제거 - 무한 재로딩 방지
+    }, []);
 
     // 정렬
     const handleSortChange = useCallback((key, order) => {
@@ -125,13 +128,32 @@ export default function NoticePage() {
         setDetail(null);
     }, []);
 
+    // 에러 메시지 생성 함수
+    const getErrorMessage = (error) => {
+        if (!error) return '';
+
+        if (typeof error === 'string') {
+            return error;
+        }
+
+        if (error.type === 'response') {
+            return `서버 오류 (${error.status}): ${error.message}`;
+        } else if (error.type === 'network') {
+            return '네트워크 연결 오류가 발생했습니다.';
+        } else if (error.type === 'request') {
+            return `요청 오류: ${error.message}`;
+        }
+
+        return error.message || '알 수 없는 오류가 발생했습니다.';
+    };
+
     return (
         <PageWrapper
             title="자료실"
             subtitle="공지사항"
             showCard={false}
         >
-            <div className="max-w-4xl mx-auto p-8">
+            <div className="max-w-4xl mx-auto">
                 <h1 className="text-2xl font-bold mb-6">공지사항</h1>
                 {!selected ? (
                     <>
@@ -205,8 +227,9 @@ export default function NoticePage() {
                             onRowClick={handleRowClick}
                         />
                         {listError && (
-                            <div className="text-red-500 mt-4">
-                                데이터를 불러오는 중 오류가 발생했습니다: {listError}
+                            <div className="text-red-500 mt-4 p-4 bg-red-50 rounded border border-red-200">
+                                <div className="font-medium mb-1">데이터를 불러오는 중 오류가 발생했습니다:</div>
+                                <div className="text-sm">{getErrorMessage(listError)}</div>
                             </div>
                         )}
                     </>
@@ -214,9 +237,14 @@ export default function NoticePage() {
                     <div>
                         <button onClick={handleBack} className="mb-4 text-blue-600 underline">&larr; 목록으로</button>
                         {detailLoading ? (
-                            <div>로딩 중...</div>
+                            <div className="flex items-center justify-center py-8">
+                                <div className="text-gray-500">로딩 중...</div>
+                            </div>
                         ) : detailError ? (
-                            <div className="text-red-500">상세 정보를 불러오는 중 오류가 발생했습니다: {detailError}</div>
+                            <div className="text-red-500 p-4 bg-red-50 rounded border border-red-200">
+                                <div className="font-medium mb-1">상세 정보를 불러오는 중 오류가 발생했습니다:</div>
+                                <div className="text-sm">{getErrorMessage(detailError)}</div>
+                            </div>
                         ) : detail ? (
                             <div className="border rounded p-6 bg-gray-50">
                                 <h2 className="text-xl font-bold mb-2">{detail.ttl}</h2>
@@ -225,7 +253,7 @@ export default function NoticePage() {
                                 <div className="prose" dangerouslySetInnerHTML={{ __html: detail.ctnt || '' }} />
                             </div>
                         ) : (
-                            <div>상세 정보를 불러올 수 없습니다.</div>
+                            <div className="text-center py-8 text-gray-500">상세 정보를 불러올 수 없습니다.</div>
                         )}
                     </div>
                 )}

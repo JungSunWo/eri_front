@@ -7,7 +7,8 @@
  * @History        : 20250701  최초 신규
  **/
 
-import ConsultationPopupProvider from "@/app/shared/components/ConsultationPopupProvider";
+import PageMove from "@/app/shared/components/common/PageMove";
+import ConsultationPopupProvider from "@/components/ConsultationPopupProvider";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -18,6 +19,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata = {
   title: "직원권익보호 포탈",
   description: "직원권익보호 포탈",
+  viewport: "width=device-width, initial-scale=1",
 };
 
 /**
@@ -31,6 +33,7 @@ export default function RootLayout({ children }) {
     <html lang="ko">
       <body className={inter.className}>
         <ConsultationPopupProvider>
+          <PageMove />
           {children}
         </ConsultationPopupProvider>
       </body>

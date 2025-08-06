@@ -1,0 +1,63 @@
+# ERI Project Structure
+
+## Project Overview
+
+This is an Employee Rights Protection System (ERI) with both frontend and backend components.
+
+## Directory Structure
+
+```
+/
+├── eoc_front/                    # Frontend React/Next.js application
+│   └── src/
+│       └── app/
+│           └── (pages)/
+│               └── consultation/
+│                   └── expert/
+│                       └── page.js    # Expert consultation page
+│       └── shared/
+│           └── layouts/
+│               └── footer.js          # Footer component
+│   └── public/
+│       └── footer-bg.svg             # Footer background image
+│
+└── ERI/                          # Backend database and DDL files
+    └── database/
+        ├── ERI_DDL_PostgreSQL.sql           # Main DDL with 8 sections
+        ├── ERI_EMPLOYEE_DDL_PostgreSQL.sql  # Employee management DDL
+        ├── ERI_MG_DDL_PostgreSQL.sql        # Management system DDL
+        ├── CONSULTATION_BOARD_DDL.sql       # Consultation board DDL
+        ├── FILE_ATTACH_DDL.sql              # File attachment DDL
+        ├── IMAGE_BOARD_DDL.sql              # Image board DDL
+        └── SURVEY_RESPONSE_DDL.sql          # Survey system DDL
+```
+
+## Key Files
+
+- [ERI/database/ERI_DDL_PostgreSQL.sql](mdc:ERI/database/ERI_DDL_PostgreSQL.sql): Main database schema with 8 sections including expert consultation
+- [eoc_front/src/app/(pages)/consultation/expert/page.js](<mdc:eoc_front/src/app/(pages)/consultation/expert/page.js>): Expert consultation frontend
+- [eoc_front/src/app/shared/layouts/footer.js](mdc:eoc_front/src/app/shared/layouts/footer.js): Footer component with SVG background
+
+## System Components
+
+1. **Self-Care System**: Employee wellness and self-management
+2. **Habit Challenge**: Employee engagement and habit tracking
+3. **Program Application**: Program registration and management
+4. **Counseling Application**: General counseling services
+5. **Shortcut Management**: Quick access features
+6. **Common Code Management**: System-wide code tables
+7. **Employee Rights Board**: Employee rights and complaints
+8. **Expert Consultation**: Specialized consultation services
+
+## Development Guidelines
+
+- Follow established naming conventions for database objects
+- Use Korean comments and descriptions
+- Implement responsive design for frontend
+- Maintain consistent code structure across all files
+- Apply proper error handling and validation
+  description:
+  globs:
+  alwaysApply: false
+
+---

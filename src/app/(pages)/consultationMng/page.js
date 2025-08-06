@@ -1,6 +1,5 @@
 'use client';
 
-
 import { consultationAPI } from '@/app/core/services/api';
 import AnonymousIdentityManager from '@/app/shared/components/AnonymousIdentityManager';
 import Board from '@/app/shared/components/Board';
@@ -10,6 +9,7 @@ import CmpInput from '@/app/shared/components/ui/CmpInput';
 import CmpSelect from '@/app/shared/components/ui/CmpSelect';
 import CmpTextarea from '@/app/shared/components/ui/CmpTextarea';
 import CommonModal from '@/app/shared/components/ui/CommonModal';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
 import { alert } from '@/app/shared/utils/ui_com';
 import { useRouter } from 'next/navigation';
@@ -22,7 +22,6 @@ const CounselingPage = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [loading, setLoading] = useState(false);
 
     // 검색 조건
     const [searchType, setSearchType] = useState('all');
@@ -73,63 +72,134 @@ const CounselingPage = () => {
         { value: 'PRI004', label: '낮음' }
     ];
 
-
-
-    // 상담 목록 조회
-    const fetchConsultationList = async (page = 1) => {
-        setLoading(true);
-        try {
-            const params = {
-                page: page,
-                size: pageSize,
-                sortBy: sortKey,
-                sortDirection: sortOrder.toUpperCase()
-            };
-
-            if (searchKeyword) {
-                params.searchType = searchType;
-                params.searchKeyword = searchKeyword;
-            }
-            if (categoryCd) params.categoryCd = categoryCd;
-            if (stsCd) params.stsCd = stsCd;
-            if (anonymousYn) params.anonymousYn = anonymousYn;
-            if (urgentYn) params.urgentYn = urgentYn;
-            if (startDate) params.startDate = startDate;
-            if (endDate) params.endDate = endDate;
-
-            const response = await consultationAPI.getConsultationList(params);
-
-            if (response.success) {
-                setConsultationList(response.data.content);
-                setTotalElements(response.data.totalElements);
-                setCurrentPage(response.data.currentPage);
-            } else {
-                alert.AlertOpen('상담 목록 조회 실패', '상담 목록 조회에 실패했습니다.');
-            }
-        } catch (error) {
-            console.error('상담 목록 조회 오류:', error);
-            alert.AlertOpen('상담 목록 조회 오류', '상담 목록 조회 중 오류가 발생했습니다.');
-        } finally {
-            setLoading(false);
-        }
+    // 상담 목록 조회 쿼리 파라미터
+    const consultationQueryParams = {
+        page: currentPage,
+        size: pageSize,
+        sortBy: sortKey,
+        sortDirection: sortOrder.toUpperCase(),
+        ...(searchKeyword && { searchType, searchKeyword }),
+        ...(categoryCd && { categoryCd }),
+        ...(stsCd && { stsCd }),
+        ...(anonymousYn && { anonymousYn }),
+        ...(urgentYn && { urgentYn }),
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate })
     };
 
+    // 상담 목록 조회 (Zustand Query 사용)
+    const {
+        data: consultationData,
+        isLoading: consultationLoading,
+        error: consultationError,
+        refetch: refetchConsultations
+    } = useQuery(
+        ['consultation-list', consultationQueryParams],
+        () => consultationAPI.getConsultationList(consultationQueryParams),
+        {
+            cacheTime: 2 * 60 * 1000, // 2분 캐시
+            retry: 3,
+            refetchOnWindowFocus: false,
+        }
+    );
 
+    // 상담 답변 저장 뮤테이션
+    const {
+        mutate: saveAnswerMutation,
+        isLoading: saveAnswerLoading,
+        error: saveAnswerError
+    } = useMutation(
+        'save-answer',
+        (answerData) => consultationAPI.saveAnswer(answerData),
+        {
+            onSuccess: (response) => {
+                if (response.success) {
+                    alert.callCommonAlertOpen('답변이 성공적으로 저장되었습니다.');
+                    setShowAnswerModal(false);
+                    setAnswerContent('');
+                    setAnswerFiles([]);
+                    refetchConsultations();
+                } else {
+                    alert.callCommonAlertOpen(response.message || '답변 저장에 실패했습니다.');
+                }
+            },
+            onError: (error) => {
+                console.error('답변 저장 실패:', error);
+                alert.callCommonAlertOpen('답변 저장 중 오류가 발생했습니다.');
+            },
+            invalidateQueries: [['consultation-list']]
+        }
+    );
+
+    // 상담 삭제 뮤테이션
+    const {
+        mutate: deleteConsultationMutation,
+        isLoading: deleteConsultationLoading,
+        error: deleteConsultationError
+    } = useMutation(
+        'delete-consultation',
+        (seq) => consultationAPI.deleteConsultation(seq),
+        {
+            onSuccess: (response) => {
+                if (response.success) {
+                    alert.callCommonAlertOpen('상담이 성공적으로 삭제되었습니다.');
+                    refetchConsultations();
+                } else {
+                    alert.callCommonAlertOpen(response.message || '상담 삭제에 실패했습니다.');
+                }
+            },
+            onError: (error) => {
+                console.error('상담 삭제 실패:', error);
+                alert.callCommonAlertOpen('상담 삭제 중 오류가 발생했습니다.');
+            },
+            invalidateQueries: [['consultation-list']]
+        }
+    );
+
+    // 데이터 설정
+    useEffect(() => {
+        if (consultationData?.success) {
+            const data = consultationData.data;
+            setConsultationList(data.content || []);
+            setTotalElements(data.totalElements || 0);
+        }
+    }, [consultationData]);
+
+    // 로딩 상태 통합
+    const loading = consultationLoading || saveAnswerLoading || deleteConsultationLoading;
+
+    // 에러 메시지 생성 함수
+    const getErrorMessage = (error) => {
+        if (!error) return '';
+
+        if (typeof error === 'string') {
+            return error;
+        }
+
+        if (error.type === 'response') {
+            return `서버 오류 (${error.status}): ${error.message}`;
+        } else if (error.type === 'network') {
+            return '네트워크 연결 오류가 발생했습니다.';
+        } else if (error.type === 'request') {
+            return `요청 오류: ${error.message}`;
+        }
+
+        return error.message || '알 수 없는 오류가 발생했습니다.';
+    };
 
     // 상담 상세 조회
     const fetchConsultationDetail = async (seq) => {
         try {
             const response = await consultationAPI.getConsultationDetail(seq);
-
             if (response.success) {
                 setSelectedConsultation(response.data);
                 setShowDetailModal(true);
             } else {
-                alert.AlertOpen('상담 상세 조회 실패', '상담 상세 조회에 실패했습니다.');
+                alert.callCommonAlertOpen('상담 상세 조회에 실패했습니다.');
             }
         } catch (error) {
-            console.error('상담 상세 조회 오류:', error);
-            alert.AlertOpen('상담 상세 조회 오류', '상담 상세 조회 중 오류가 발생했습니다.');
+            console.error('상담 상세 조회 실패:', error);
+            alert.callCommonAlertOpen('상담 상세 조회 중 오류가 발생했습니다.');
         }
     };
 
@@ -139,72 +209,37 @@ const CounselingPage = () => {
     };
 
     // 답변 저장
-    const saveAnswer = async () => {
+    const saveAnswer = () => {
+        if (!selectedConsultation) return;
+
         if (!answerContent.trim()) {
-            alert.AlertOpen('답변 내용 입력', '답변 내용을 입력해주세요.');
+            alert.callCommonAlertOpen('답변 내용을 입력해주세요.');
             return;
         }
 
-        try {
-            const formData = new FormData();
-            formData.append('consultationSeq', selectedConsultation.seq);
-            formData.append('cntn', answerContent);
+        const answerData = {
+            consultationSeq: selectedConsultation.seq,
+            content: answerContent,
+            files: answerFiles
+        };
 
-            answerFiles.forEach(file => {
-                formData.append('files', file);
-            });
-
-            const response = await consultationAPI.saveAnswer(selectedConsultation.seq, formData);
-
-            if (response.success) {
-                alert.AlertOpen('답변 저장 완료', '답변이 저장되었습니다.');
-                setShowAnswerModal(false);
-                setAnswerContent('');
-                setAnswerFiles([]);
-                fetchConsultationDetail(selectedConsultation.seq);
-            } else {
-                alert.AlertOpen('답변 저장 실패', response.message || '답변 저장에 실패했습니다.');
-            }
-        } catch (error) {
-            console.error('답변 저장 오류:', error);
-            alert.AlertOpen('답변 저장 오류', '답변 저장 중 오류가 발생했습니다.');
-        }
+        saveAnswerMutation(answerData);
     };
 
     // 상담 삭제
-    const deleteConsultation = async (seq) => {
-        const confirmed = await new Promise((resolve) => {
-            alert.ConfirmOpen('삭제 확인', '상담을 삭제하시겠습니까?', {
-                okCallback: () => {
-                    resolve(true);
-                },
-                cancelCallback: () => {
-                    resolve(false);
-                }
-            });
-        });
-
-        if (!confirmed) return;
-
-        try {
-            const response = await consultationAPI.deleteConsultation(seq);
-
-            if (response.success) {
-                alert.AlertOpen('상담 삭제 완료', '상담이 삭제되었습니다.');
-                fetchConsultationList(currentPage);
-            } else {
-                alert.AlertOpen('상담 삭제 실패', response.message || '상담 삭제에 실패했습니다.');
+    const deleteConsultation = (seq) => {
+        alert.ConfirmOpen('상담 삭제', '정말로 이 상담을 삭제하시겠습니까?', {
+            okLabel: '삭제',
+            cancelLabel: '취소',
+            okCallback: () => {
+                deleteConsultationMutation(seq);
             }
-        } catch (error) {
-            console.error('상담 삭제 오류:', error);
-            alert.AlertOpen('상담 삭제 오류', '상담 삭제 중 오류가 발생했습니다.');
-        }
+        });
     };
 
     // 검색
     const handleSearch = () => {
         setCurrentPage(1);
-        fetchConsultationList(1);
     };
 
     // 검색 조건 초기화
@@ -218,50 +253,60 @@ const CounselingPage = () => {
         setStartDate('');
         setEndDate('');
         setCurrentPage(1);
-        fetchConsultationList(1);
     };
 
     // 페이지 변경
     const handlePageChange = (page) => {
         setCurrentPage(page);
-        fetchConsultationList(page);
     };
 
     // 정렬 변경
     const handleSortChange = (key, order) => {
         setSortKey(key);
         setSortOrder(order);
-        fetchConsultationList(currentPage);
+        setCurrentPage(1);
     };
 
     // 답변 모달 열기
     const openAnswerModal = () => {
-        setAnswerContent(selectedConsultation.answer?.cntn || '');
         setShowAnswerModal(true);
+        setAnswerContent('');
+        setAnswerFiles([]);
     };
 
-    // 파일 선택
+    // 파일 변경 처리
     const handleFileChange = (e) => {
-        setAnswerFiles(Array.from(e.target.files));
+        const files = Array.from(e.target.files);
+        setAnswerFiles(files);
     };
 
-    // 상태별 스타일
+    // 상태 스타일 반환
     const getStatusStyle = (status) => {
         switch (status) {
-            case 'STS001': return { color: '#ff6b6b', fontWeight: 'bold' };
-            case 'STS002': return { color: '#51cf66', fontWeight: 'bold' };
-            case 'STS003': return { color: '#868e96', fontWeight: 'bold' };
-            default: return {};
+            case 'STS001':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'STS002':
+                return 'bg-green-100 text-green-800';
+            case 'STS003':
+                return 'bg-gray-100 text-gray-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
         }
     };
 
+    // 우선순위 스타일 반환
     const getPriorityStyle = (priority) => {
         switch (priority) {
-            case 'PRI001': return { color: '#ff6b6b', fontWeight: 'bold' };
-            case 'PRI002': return { color: '#ffa726', fontWeight: 'bold' };
-            case 'PRI003': return { color: '#42a5f5', fontWeight: 'bold' };
-            case 'PRI004': return { color: '#868e96', fontWeight: 'bold' };
-            default: return {};
+            case 'PRI001':
+                return 'bg-red-100 text-red-800';
+            case 'PRI002':
+                return 'bg-orange-100 text-orange-800';
+            case 'PRI003':
+                return 'bg-blue-100 text-blue-800';
+            case 'PRI004':
+                return 'bg-gray-100 text-gray-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
         }
     };
 
@@ -379,7 +424,7 @@ const CounselingPage = () => {
     };
 
     useEffect(() => {
-        fetchConsultationList();
+        refetchConsultations();
     }, []);
 
     return (

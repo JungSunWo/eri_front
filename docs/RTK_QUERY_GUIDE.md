@@ -42,14 +42,23 @@
 
 ## 파일 구조
 
-현재 프로젝트의 RTK Query 관련 파일들은 다음 경로에 위치합니다:
-
 ```
-src/app/core/services/
-├── queryStore.js      # Zustand 기반 쿼리 스토어
-├── useQuery.js        # 커스텀 훅들 (useQuery, useMutation 등)
-├── exampleUsage.js    # 사용 예시 컴포넌트들
-└── api.js            # API 클라이언트 및 함수들
+src/
+├── app/
+│   ├── shared/
+│   │   └── hooks/
+│   │       └── useQuery.js          # 메인 쿼리 훅들
+│   └── core/
+│       ├── slices/
+│       │   └── queryStore.js        # Zustand 스토어
+│       └── services/
+│           ├── apiClient.js          # API 클라이언트
+│           ├── api.js                # API 통합 export
+│           ├── api/                  # 도메인별 API
+│           │   ├── authAPI.js
+│           │   ├── noticeAPI.js
+│           │   └── ...
+│           └── exampleUsage.js       # 사용 예제
 ```
 
 ## 설치 및 설정
@@ -81,219 +90,229 @@ export const store = configureStore({
 
 ## 기본 사용법
 
-### 1. 쿼리 (Query)
-
-#### 기본 쿼리
+### 1. useQuery 훅 사용
 
 ```javascript
-import { useQuery } from "@/app/core/services/useQuery";
+import { useQuery } from "@/hooks/useQuery";
 
-function UserList() {
+function NoticeList() {
   const { data, isLoading, error, refetch } = useQuery(
-    "users",
-    userAPI.getUsers
+    "notices",
+    () => noticeAPI.getNoticeList(),
+    {
+      enabled: true,
+      refetchOnWindowFocus: true,
+      refetchInterval: 30000, // 30초마다 자동 갱신
+    }
   );
 
   if (isLoading) return <div>로딩 중...</div>;
-  if (error) return <div>에러: {error}</div>;
+  if (error) return <div>오류: {error.message}</div>;
 
   return (
     <div>
-      {data?.map((user) => (
-        <div key={user.id}>{user.name}</div>
+      {data?.map((notice) => (
+        <div key={notice.id}>{notice.title}</div>
       ))}
     </div>
   );
 }
 ```
 
-#### 고급 옵션
+### 2. useMutation 훅 사용
 
 ```javascript
-const { data, isLoading, error } = useQuery("users", userAPI.getUsers, {
-  enabled: true, // 자동 실행 여부
-  retry: 3, // 재시도 횟수
-  cacheTime: 10 * 60 * 1000, // 캐시 시간 (10분)
-  refetchOnWindowFocus: true, // 윈도우 포커스 시 리페치
-  refetchInterval: 30000, // 30초마다 자동 새로고침
-});
-```
+import { useMutation } from "@/hooks/useQuery";
 
-### 2. 뮤테이션 (Mutation)
-
-#### 기본 뮤테이션
-
-```javascript
-import { useMutation } from "@/app/core/services/useQuery";
-
-function CreateUser() {
+function CreateNotice() {
   const { mutate, isLoading, error } = useMutation(
-    "createUser",
-    userAPI.createUser,
+    "createNotice",
+    (newNotice) => noticeAPI.createNotice(newNotice),
     {
       onSuccess: (data) => {
-        console.log("사용자 생성 성공:", data);
-        // 캐시 무효화
-        refetch();
+        console.log("공지사항 생성 성공:", data);
+        // 성공 시 쿼리 무효화
+        invalidateQueries("notices");
       },
       onError: (error) => {
-        console.error("사용자 생성 실패:", error);
+        console.error("공지사항 생성 실패:", error);
       },
     }
   );
 
-  const handleSubmit = (userData) => {
-    mutate(userData);
+  const handleSubmit = (formData) => {
+    mutate(formData);
+  };
+
+  return <form onSubmit={handleSubmit}>{/* 폼 내용 */}</form>;
+}
+```
+
+### 3. useLazyQuery 훅 사용
+
+```javascript
+import { useLazyQuery } from "@/hooks/useQuery";
+
+function SearchComponent() {
+  const { data, isLoading, execute } = useLazyQuery("search", (searchTerm) =>
+    searchAPI.search(searchTerm)
+  );
+
+  const handleSearch = (term) => {
+    execute(term);
   };
 
   return (
-    <button onClick={() => handleSubmit({ name: "John" })}>사용자 생성</button>
-  );
-}
-```
-
-### 3. 지연 실행 쿼리 (Lazy Query)
-
-```javascript
-import { useLazyQuery } from "@/app/core/services/useQuery";
-
-function SearchComponent() {
-  const { data, execute, isLoading } = useLazyQuery("search", searchAPI.search);
-
-  return (
     <div>
-      <input
-        type="text"
-        placeholder="검색어 입력"
-        onChange={(e) => {
-          if (e.target.value.length > 2) {
-            execute();
-          }
-        }}
-      />
-      <button onClick={execute}>검색</button>
+      <input onChange={(e) => handleSearch(e.target.value)} />
+      {isLoading && <div>검색 중...</div>}
+      {data && <div>검색 결과: {data.length}개</div>}
     </div>
   );
 }
 ```
 
-### 4. 무한 쿼리 (Infinite Query)
+### 4. useInfiniteQuery 훅 사용
 
 ```javascript
-import { useInfiniteQuery } from "@/app/core/services/useQuery";
+import { useInfiniteQuery } from "@/hooks/useQuery";
 
-function InfiniteUserList() {
-  const { data, fetchNextPage, hasNextPage, isLoading } = useInfiniteQuery(
-    "users-infinite",
-    ({ pageParam = 1 }) => userAPI.getUsersPaginated(pageParam),
+function InfiniteNoticeList() {
+  const { data, isLoading, fetchNextPage, hasNextPage } = useInfiniteQuery(
+    "infiniteNotices",
+    (pageParam) => noticeAPI.getNoticeList({ page: pageParam }),
     {
-      getNextPageParam: (lastPage) => {
-        return lastPage.hasNextPage ? lastPage.nextPage : undefined;
-      },
+      getNextPageParam: (lastPage) => lastPage.nextPage,
     }
   );
 
   return (
     <div>
-      {data?.pages?.map((page, pageIndex) => (
-        <div key={pageIndex}>
-          {page.data.map((user) => (
-            <div key={user.id}>{user.name}</div>
+      {data?.pages.map((page, i) => (
+        <div key={i}>
+          {page.data.map((notice) => (
+            <div key={notice.id}>{notice.title}</div>
           ))}
         </div>
       ))}
-
-      {hasNextPage && <button onClick={fetchNextPage}>더 보기</button>}
+      {hasNextPage && <button onClick={() => fetchNextPage()}>더 보기</button>}
     </div>
   );
 }
 ```
-
----
 
 ## 고급 기능
 
-### 1. 캐시 관리
-
-#### 캐시 무효화
+### 쿼리 상태 관리
 
 ```javascript
-import { useQueryStore } from "@/app/core/services/queryStore";
+import { useQueryStore } from "@/slices/queryStore";
 
-const { invalidateQueries, clearCache } = useQueryStore();
+// 쿼리 무효화
+const { invalidateQueries } = useQueryStore();
+invalidateQueries("notices");
 
-// 특정 쿼리 무효화
-invalidateQueries(["users", "posts"]);
+// 특정 쿼리 데이터 업데이트
+const { updateQueryData } = useQueryStore();
+updateQueryData("notices", (oldData) => {
+  return oldData.map((notice) =>
+    notice.id === updatedNotice.id ? updatedNotice : notice
+  );
+});
 
-// 모든 캐시 클리어
+// 캐시 전체 삭제
+const { clearCache } = useQueryStore();
 clearCache();
 ```
 
-#### 수동 데이터 업데이트
+### 실시간 기능
 
 ```javascript
-const { updateData } = useQuery("user", userAPI.getUser);
+// 윈도우 포커스 시 자동 갱신
+const { data } = useQuery("notices", fetchNotices, {
+  refetchOnWindowFocus: true,
+});
 
-const { mutate } = useMutation("updateUser", userAPI.updateUser, {
-  onSuccess: (data) => {
-    // 즉시 UI 업데이트
-    updateData((oldData) => ({
-      ...oldData,
-      ...data,
-    }));
-  },
+// 주기적 갱신 (30초마다)
+const { data } = useQuery("notices", fetchNotices, {
+  refetchInterval: 30000,
+});
+
+// 조건부 쿼리 실행
+const { data } = useQuery("notices", fetchNotices, {
+  enabled: userIsLoggedIn,
 });
 ```
 
-### 2. 실시간 업데이트
+## 파일 구조
 
-```javascript
-function RealTimeData() {
-  const { data, refetch } = useQuery("realtime-data", api.getData, {
-    refetchInterval: 5000, // 5초마다 자동 새로고침
-    refetchOnWindowFocus: true, // 윈도우 포커스 시 새로고침
-    cacheTime: 5 * 60 * 1000, // 5분 캐시
-  });
-
-  return (
-    <div>
-      <button onClick={refetch}>수동 새로고침</button>
-      {/* 데이터 표시 */}
-    </div>
-  );
-}
+```
+src/
+├── app/
+│   ├── shared/
+│   │   └── hooks/
+│   │       └── useQuery.js          # 메인 쿼리 훅들
+│   └── core/
+│       ├── slices/
+│       │   └── queryStore.js        # Zustand 스토어
+│       └── services/
+│           ├── apiClient.js          # API 클라이언트
+│           ├── api.js                # API 통합 export
+│           ├── api/                  # 도메인별 API
+│           │   ├── authAPI.js
+│           │   ├── noticeAPI.js
+│           │   └── ...
+│           └── exampleUsage.js       # 사용 예제
 ```
 
-### 3. 에러 처리 및 재시도
+## 성능 최적화
+
+### 1. 캐시 전략
 
 ```javascript
-const { data, error } = useQuery("users", userAPI.getUsers, {
-  retry: 3, // 3번 재시도
-  retryDelay: 1000, // 1초 간격
-  onError: (error) => {
-    console.error("쿼리 실패:", error);
-  },
+// 캐시 시간 설정
+const { data } = useQuery("notices", fetchNotices, {
+  cacheTime: 5 * 60 * 1000, // 5분
+  staleTime: 2 * 60 * 1000, // 2분
 });
 ```
 
-### 4. 조건부 쿼리
+### 2. 배치 처리
 
 ```javascript
-function UserDetail({ userId }) {
-  const { data, isLoading } = useQuery(
-    ["user", userId],
-    () => userAPI.getUser(userId),
-    {
-      enabled: !!userId, // userId가 있을 때만 실행
-      retry: 2,
-    }
-  );
+// 여러 쿼리를 한 번에 무효화
+invalidateQueries(["notices", "users", "settings"]);
 
-  if (!userId) return <div>사용자 ID가 필요합니다.</div>;
-  if (isLoading) return <div>로딩 중...</div>;
+// 조건부 무효화
+invalidateQueries((queryKey) => queryKey.startsWith("notices"));
+```
 
-  return <div>{data?.name}</div>;
-}
+### 3. 낙관적 업데이트
+
+```javascript
+const { mutate } = useMutation("createNotice", createNotice, {
+  onMutate: async (newNotice) => {
+    // 이전 데이터 백업
+    await queryClient.cancelQueries("notices");
+    const previousNotices = queryClient.getQueryData("notices");
+
+    // 낙관적 업데이트
+    queryClient.setQueryData("notices", (old) => [
+      ...old,
+      { ...newNotice, id: "temp-id" },
+    ]);
+
+    return { previousNotices };
+  },
+  onError: (err, newNotice, context) => {
+    // 오류 시 이전 데이터 복원
+    queryClient.setQueryData("notices", context.previousNotices);
+  },
+  onSettled: () => {
+    // 완료 후 쿼리 무효화
+    queryClient.invalidateQueries("notices");
+  },
+});
 ```
 
 ---

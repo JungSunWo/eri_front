@@ -8,7 +8,7 @@
  * @History        : 20250701  최초 신규
  **/
 
-import { api } from './apiClient';
+import { api } from '../apiClient';
 
 /**
  * 메뉴 관련 API

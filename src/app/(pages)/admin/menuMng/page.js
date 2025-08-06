@@ -12,22 +12,23 @@
 
 import { menuAPI } from '@/app/core/services/api';
 import { CmpBadge, CmpInput, CmpSelect, CmpTextarea } from '@/app/shared/components/ui';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
 import { toast } from '@/app/shared/utils/ui_com';
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
-    ChevronDown,
-    ChevronRight,
-    FileText,
-    Folder,
-    FolderOpen,
-    GripVertical,
-    Menu,
-    Plus,
-    RefreshCw,
-    Trash2
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Folder,
+  FolderOpen,
+  GripVertical,
+  Menu,
+  Plus,
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -35,7 +36,6 @@ export default function MenuManagementPage() {
   const [menuTree, setMenuTree] = useState([]);
   const [selectedMenu, setSelectedMenu] = useState(null);
   const [expandedNodes, setExpandedNodes] = useState(new Set());
-  const [loading, setLoading] = useState(false);
   const [parentMenus, setParentMenus] = useState([]); // 상위 메뉴 목록
 
   // 편집 모드 상태
@@ -88,6 +88,193 @@ export default function MenuManagementPage() {
     { value: 'COUNSELOR', label: '상담사' },
     { value: 'ADMIN', label: '관리자' }
   ];
+
+  // 메뉴 목록 조회 (Zustand Query 사용)
+  const {
+    data: menuData,
+    isLoading: menuLoading,
+    error: menuError,
+    refetch: refetchMenus
+  } = useQuery(
+    ['menu-list'],
+    () => menuAPI.getMenuList(),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // 상위 메뉴 목록 조회 (Zustand Query 사용)
+  const {
+    data: parentMenuData,
+    isLoading: parentMenuLoading,
+    error: parentMenuError,
+    refetch: refetchParentMenus
+  } = useQuery(
+    ['parent-menu-list'],
+    () => menuAPI.getParentMenuList(),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // 메뉴 생성 뮤테이션
+  const {
+    mutate: createMenuMutation,
+    isLoading: createMenuLoading,
+    error: createMenuError
+  } = useMutation(
+    'create-menu',
+    (menuData) => menuAPI.createMenu(menuData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('메뉴가 등록되었습니다.');
+          setIsCreateMode(false);
+          refetchMenus();
+          refetchParentMenus();
+        } else {
+          toast.callCommonToastOpen('메뉴 등록 실패: ' + response.message);
+        }
+      },
+      onError: (error) => {
+        console.error('메뉴 등록 실패:', error);
+        toast.callCommonToastOpen('메뉴 등록 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['menu-list'], ['parent-menu-list']]
+    }
+  );
+
+  // 메뉴 수정 뮤테이션
+  const {
+    mutate: updateMenuMutation,
+    isLoading: updateMenuLoading,
+    error: updateMenuError
+  } = useMutation(
+    'update-menu',
+    ({ mnuCd, menuData }) => menuAPI.updateMenu(mnuCd, menuData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('메뉴가 수정되었습니다.');
+          setIsEditMode(false);
+          refetchMenus();
+          refetchParentMenus();
+        } else {
+          toast.callCommonToastOpen('메뉴 수정 실패: ' + response.message);
+        }
+      },
+      onError: (error) => {
+        console.error('메뉴 수정 실패:', error);
+        toast.callCommonToastOpen('메뉴 수정 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['menu-list'], ['parent-menu-list']]
+    }
+  );
+
+  // 메뉴 삭제 뮤테이션
+  const {
+    mutate: deleteMenuMutation,
+    isLoading: deleteMenuLoading,
+    error: deleteMenuError
+  } = useMutation(
+    'delete-menu',
+    (mnuCd) => menuAPI.deleteMenu(mnuCd),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('메뉴가 삭제되었습니다.');
+          setSelectedMenu(null);
+          setIsEditMode(false);
+          setIsCreateMode(false);
+          refetchMenus();
+          refetchParentMenus();
+        } else {
+          toast.callCommonToastOpen('메뉴 삭제 실패: ' + response.message);
+        }
+      },
+      onError: (error) => {
+        console.error('메뉴 삭제 실패:', error);
+        toast.callCommonToastOpen('메뉴 삭제 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['menu-list'], ['parent-menu-list']]
+    }
+  );
+
+  // 메뉴 순서 변경 뮤테이션
+  const {
+    mutate: updateMenuOrderMutation,
+    isLoading: updateMenuOrderLoading,
+    error: updateMenuOrderError
+  } = useMutation(
+    'update-menu-order',
+    ({ mnuCd, order }) => menuAPI.updateMenuOrder(mnuCd, order),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('메뉴 순서가 변경되었습니다.');
+          refetchMenus();
+        } else {
+          toast.callCommonToastOpen('메뉴 순서 변경 실패: ' + response.message);
+        }
+      },
+      onError: (error) => {
+        console.error('메뉴 순서 변경 실패:', error);
+        toast.callCommonToastOpen('메뉴 순서 변경 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['menu-list']]
+    }
+  );
+
+  // 데이터 설정
+  useEffect(() => {
+    if (menuData?.success) {
+      console.log('백엔드 응답 전체:', menuData);
+      console.log('메뉴 데이터 상세:', menuData.data.map(menu => ({
+        mnuCd: menu.mnuCd,
+        mnuNm: menu.mnuNm,
+        mnuLvl: menu.mnuLvl,
+        pMnuCd: menu.pMnuCd,
+        pmnuCd: menu.pmnuCd,
+        allFields: menu
+      })));
+
+      const treeData = buildMenuTree(menuData.data);
+      setMenuTree(treeData);
+    }
+  }, [menuData]);
+
+  useEffect(() => {
+    if (parentMenuData?.success) {
+      console.log('상위 메뉴 목록:', parentMenuData.data);
+      setParentMenus(parentMenuData.data);
+    }
+  }, [parentMenuData]);
+
+  // 로딩 상태 통합
+  const loading = menuLoading || parentMenuLoading || createMenuLoading || updateMenuLoading || deleteMenuLoading || updateMenuOrderLoading;
+
+  // 에러 메시지 생성 함수
+  const getErrorMessage = (error) => {
+    if (!error) return '';
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    if (error.type === 'response') {
+      return `서버 오류 (${error.status}): ${error.message}`;
+    } else if (error.type === 'network') {
+      return '네트워크 연결 오류가 발생했습니다.';
+    } else if (error.type === 'request') {
+      return `요청 오류: ${error.message}`;
+    }
+
+    return error.message || '알 수 없는 오류가 발생했습니다.';
+  };
 
   // 드래그 가능한 트리 노드 컴포넌트
   const DraggableTreeNode = ({ menu, level = 0, onSelect, onToggle, isSelected, isExpanded, hasChildren }) => {
@@ -177,57 +364,6 @@ export default function MenuManagementPage() {
         </div>
       </div>
     );
-  };
-
-  // 페이지 로드 시 메뉴 트리 조회
-  useEffect(() => {
-    loadMenuTree();
-    loadParentMenus(); // 처음 화면 진입 시 상위 메뉴 목록도 함께 로드
-  }, []);
-
-  // 메뉴 트리 조회
-  const loadMenuTree = async () => {
-    setLoading(true);
-    try {
-      const result = await menuAPI.getMenuList();
-
-      if (result.success) {
-        console.log('백엔드 응답 전체:', result);
-        console.log('메뉴 데이터 상세:', result.data.map(menu => ({
-          mnuCd: menu.mnuCd,
-          mnuNm: menu.mnuNm,
-          mnuLvl: menu.mnuLvl,
-          pMnuCd: menu.pMnuCd,
-          pmnuCd: menu.pmnuCd, // 혹시 다른 필드명으로 올 수도 있음
-          allFields: menu // 모든 필드 확인
-        })));
-
-        const treeData = buildMenuTree(result.data);
-        setMenuTree(treeData);
-      } else {
-        toast.callCommonToastOpen('메뉴 트리 조회 실패: ' + result.message);
-      }
-    } catch (error) {
-      toast.callCommonToastOpen('메뉴 트리 조회 실패: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 상위 메뉴 목록 로드
-  const loadParentMenus = async () => {
-    try {
-      const result = await menuAPI.getParentMenuList();
-
-      if (result.success) {
-        console.log('상위 메뉴 목록:', result.data);
-        setParentMenus(result.data);
-      } else {
-        console.error('상위 메뉴 목록 로드 실패:', result.message);
-      }
-    } catch (error) {
-      console.error('상위 메뉴 목록 로드 실패:', error);
-    }
   };
 
   // 메뉴 데이터를 트리 구조로 변환
@@ -324,15 +460,6 @@ export default function MenuManagementPage() {
       mnuUseYn: menu.mnuUseYn,
       mnuAuthType: menu.mnuAuthType
     });
-
-    // 하위 메뉴인 경우 상위 메뉴 목록 로드
-    if (menu.mnuLvl === '2') {
-      console.log('하위 메뉴 선택됨, 상위 메뉴 목록 로드 시작');
-      await loadParentMenus();
-    } else {
-      // 대메뉴인 경우에도 상위 메뉴 목록 다시 로드 (최신 상태 유지)
-      await loadParentMenus();
-    }
   };
 
   // 새 메뉴 생성 모드
@@ -351,8 +478,6 @@ export default function MenuManagementPage() {
       mnuUseYn: 'Y',
       mnuAuthType: 'USER'
     });
-    // 상위 메뉴 목록 다시 로드
-    loadParentMenus();
   };
 
   // 메뉴 수정 모드
@@ -363,9 +488,6 @@ export default function MenuManagementPage() {
     }
     setIsEditMode(true);
     setIsCreateMode(false);
-
-    // 상위 메뉴 목록 다시 로드 (하위 메뉴 수정 시 필요)
-    await loadParentMenus();
 
     // 수정 모드에서 폼 데이터 다시 설정
     console.log('수정 모드 - 선택된 메뉴 전체 데이터:', selectedMenu);
@@ -405,22 +527,7 @@ export default function MenuManagementPage() {
       return;
     }
 
-    try {
-      const result = await menuAPI.deleteMenu(selectedMenu.mnuCd);
-
-      if (result.success) {
-        toast.callCommonToastOpen('메뉴가 삭제되었습니다.');
-        setSelectedMenu(null);
-        setIsEditMode(false);
-        setIsCreateMode(false);
-        loadMenuTree();
-        loadParentMenus(); // 삭제 후 상위 메뉴 목록 다시 로드
-      } else {
-        toast.callCommonToastOpen('메뉴 삭제 실패: ' + result.message);
-      }
-    } catch (error) {
-      toast.callCommonToastOpen('메뉴 삭제 실패: ' + error.message);
-    }
+    deleteMenuMutation(selectedMenu.mnuCd);
   };
 
   // 폼 제출 처리
@@ -468,16 +575,7 @@ export default function MenuManagementPage() {
 
         console.log('백엔드로 전송할 정리된 데이터:', updateData);
 
-        const result = await menuAPI.updateMenu(formData.mnuCd, updateData);
-        if (result.success) {
-          toast.callCommonToastOpen('메뉴가 수정되었습니다.');
-          setIsEditMode(false);
-          loadMenuTree();
-          loadParentMenus(); // 수정 후 상위 메뉴 목록 다시 로드
-        } else {
-          toast.callCommonToastOpen('메뉴 수정 실패: ' + result.message);
-          return;
-        }
+        updateMenuMutation({ mnuCd: formData.mnuCd, menuData: updateData });
       } else if (isCreateMode) {
         // 등록 모드 - 백엔드가 기대하는 형식으로 데이터 정리
         const createData = {
@@ -494,16 +592,7 @@ export default function MenuManagementPage() {
 
         console.log('백엔드로 전송할 정리된 데이터 (등록):', createData);
 
-        const result = await menuAPI.createMenu(createData);
-        if (result.success) {
-          toast.callCommonToastOpen('메뉴가 등록되었습니다.');
-          setIsCreateMode(false);
-          loadMenuTree();
-          loadParentMenus(); // 등록 후 상위 메뉴 목록 다시 로드
-        } else {
-          toast.callCommonToastOpen('메뉴 등록 실패: ' + result.message);
-          return;
-        }
+        createMenuMutation(createData);
       }
     } catch (error) {
       toast.callCommonToastOpen((isEditMode ? '메뉴 수정' : '메뉴 등록') + ' 실패: ' + error.message);
@@ -523,11 +612,6 @@ export default function MenuManagementPage() {
 
     console.log('변경 후 폼 데이터:', newFormData);
     setFormData(newFormData);
-
-    // 메뉴 레벨이 2인 경우 상위 메뉴 목록 로드
-    if (value === '2') {
-      loadParentMenus();
-    }
   };
 
   // 드래그 앤 드롭 이벤트 핸들러
@@ -592,29 +676,21 @@ export default function MenuManagementPage() {
               // 같은 레벨의 모든 메뉴 순서를 백엔드에 업데이트
               const updatePromises = newArray.map((menu, index) => {
                 const newOrder = index + 1; // 1부터 시작하는 순서
-                return menuAPI.updateMenuOrder(menu.mnuCd, newOrder);
+                return updateMenuOrderMutation({ mnuCd: menu.mnuCd, order: newOrder });
               });
 
-              const results = await Promise.all(updatePromises);
-              const allSuccess = results.every(result => result.success);
-
-              if (allSuccess) {
-                toast.callCommonToastOpen('메뉴 순서가 변경되었습니다.');
-                // 트리 새로고침
-                loadMenuTree();
-              } else {
-                const errorMessages = results
-                  .filter(result => !result.success)
-                  .map(result => result.message)
-                  .join(', ');
-                toast.callCommonToastOpen('메뉴 순서 변경 실패: ' + errorMessages);
-                // 실패 시 원래 순서로 복원
-                loadMenuTree();
+              // 순차적으로 실행
+              for (const promise of updatePromises) {
+                await promise;
               }
+
+              toast.callCommonToastOpen('메뉴 순서가 변경되었습니다.');
+              // 트리 새로고침
+              refetchMenus();
             } catch (error) {
               toast.callCommonToastOpen('메뉴 순서 변경 실패: ' + error.message);
               // 실패 시 원래 순서로 복원
-              loadMenuTree();
+              refetchMenus();
             }
           }
         } else {
@@ -677,6 +753,21 @@ export default function MenuManagementPage() {
         <p className="text-gray-600">시스템 메뉴를 트리 구조로 관리할 수 있는 페이지입니다.</p>
       </div>
 
+      {/* 에러 메시지 표시 */}
+      {(menuError || parentMenuError || createMenuError || updateMenuError || deleteMenuError || updateMenuOrderError) && (
+        <div className="p-4 bg-red-50 rounded border border-red-200 mb-6">
+          <div className="font-medium text-red-800 mb-1">오류가 발생했습니다:</div>
+          <div className="text-sm text-red-600">
+            {menuError && <div>메뉴 목록 조회: {getErrorMessage(menuError)}</div>}
+            {parentMenuError && <div>상위 메뉴 목록 조회: {getErrorMessage(parentMenuError)}</div>}
+            {createMenuError && <div>메뉴 등록: {getErrorMessage(createMenuError)}</div>}
+            {updateMenuError && <div>메뉴 수정: {getErrorMessage(updateMenuError)}</div>}
+            {deleteMenuError && <div>메뉴 삭제: {getErrorMessage(deleteMenuError)}</div>}
+            {updateMenuOrderError && <div>메뉴 순서 변경: {getErrorMessage(updateMenuOrderError)}</div>}
+          </div>
+        </div>
+      )}
+
       {/* 메인 컨텐츠 영역 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 왼쪽: 메뉴 트리 */}
@@ -694,7 +785,7 @@ export default function MenuManagementPage() {
                   새 메뉴
                 </button>
                 <button
-                  onClick={() => loadMenuTree()}
+                  onClick={() => refetchMenus()}
                   disabled={loading}
                   className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 disabled:opacity-50 flex items-center gap-1"
                 >
@@ -916,8 +1007,9 @@ export default function MenuManagementPage() {
                     <button
                       type="submit"
                       className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                      disabled={loading}
                     >
-                      {isEditMode ? '수정' : '등록'}
+                      {loading ? '저장 중...' : (isEditMode ? '수정' : '등록')}
                     </button>
                   </div>
                 )}

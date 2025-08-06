@@ -9,7 +9,7 @@
  * @History        : 20250701  최초 신규
  **/
 
-import { api } from './apiClient';
+import { api } from '../apiClient';
 
 /**
  * 직원권익게시판 관련 API 함수들

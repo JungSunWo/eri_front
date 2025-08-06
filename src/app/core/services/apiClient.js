@@ -9,7 +9,7 @@
  * @History        : 20250701  최초 신규
  **/
 
-import { toast } from '@/app/shared/utils/ui_com';
+import { toast } from '@/utils/ui_com';
 import axios from 'axios';
 
 /**

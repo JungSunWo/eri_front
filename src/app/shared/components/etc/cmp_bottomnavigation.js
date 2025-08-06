@@ -3,7 +3,7 @@ import { useUIStatus } from "@/app/core/slices/uiStatusStore";
 import gsap from 'gsap';
 import { useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { CmpButton } from '../../button/cmp_button';
+import CmpButton from '../../button/cmp_button';
 
 
 const StyledBottomNavigation = styled.div`

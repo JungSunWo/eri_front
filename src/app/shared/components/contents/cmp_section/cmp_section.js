@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import styled from 'styled-components';
 
 // Styled components
@@ -23,7 +22,7 @@ const SectionTitle = styled.h2`
   font-weight: 600;
   margin: 0;
   color: #495057;
-  
+
   &.cmp_section_tit {
     font-size: 1.25rem;
     font-weight: 600;
@@ -63,4 +62,4 @@ export const CmpSectionBody = ({ children, className = '', ...props }) => {
 };
 
 // 기본 export
-export default CmpSection; 
+export default CmpSection;

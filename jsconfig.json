@@ -2,7 +2,28 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["src/*"],
+      "@/app/*": ["src/app/*"],
+      "@/pages/*": ["src/app/(pages)/*"],
+      "@/shared/*": ["src/app/shared/*"],
+      "@/core/*": ["src/app/core/*"],
+      "@/components/*": ["src/app/shared/components/*"],
+      "@/layouts/*": ["src/app/shared/layouts/*"],
+      "@/hooks/*": ["src/app/shared/hooks/*"],
+      "@/utils/*": ["src/app/shared/utils/*"],
+      "@/config/*": ["src/app/shared/config/*"],
+      "@/services/*": ["src/app/core/services/*"],
+      "@/slices/*": ["src/app/core/slices/*"],
+      "@/models/*": ["src/app/core/models/*"],
+      "@/api/*": ["src/app/core/services/api/*"],
+      "@/styles/*": ["src/app/globals.css"],
+      "@/assets/*": ["src/assets/*"],
+      "@/images/*": ["public/image/*"],
+      "@/svgs/*": ["public/*.svg"],
+      "@/icons/*": ["public/image/common/*"],
+      "@/contents/*": ["public/image/contents/*"],
+      "@/docs/*": ["docs/*"],
+      "@/scripts/*": ["scripts/*"]
     }
   }
-} 
+}

@@ -1,23 +1,23 @@
 'use client';
 
-
 import { fileAPI, noticeAPI } from '@/app/core/services/api';
 import EmpNameDisplay from '@/app/shared/components/EmpNameDisplay';
 import { CmpBadge, CmpInput, CmpSelect, CmpTextarea, CommonModal } from '@/app/shared/components/ui';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
 import { toast } from '@/app/shared/utils/ui_com';
 import {
-    Calendar,
-    Download,
-    Edit,
-    FileText,
-    Paperclip,
-    Plus,
-    Search,
-    Trash2,
-    Upload,
-    User,
-    X
+  Calendar,
+  Download,
+  Edit,
+  FileText,
+  Paperclip,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  User,
+  X
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -26,7 +26,6 @@ export default function NoticeManagementPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize] = useState(10);
-  const [loading, setLoading] = useState(false);
 
   // 검색 상태
   const [searchTitle, setSearchTitle] = useState('');
@@ -52,58 +51,185 @@ export default function NoticeManagementPage() {
 
   const fileInputRef = useRef(null);
 
-  // 페이지 로드 시 공지사항 목록 조회
-  useEffect(() => {
-    loadNoticeList();
-  }, []);
+  // 쿼리 파라미터
+  const noticeQueryParams = {
+    page: currentPage,
+    size: pageSize,
+    title: searchTitle,
+    status: searchStatus
+  };
 
-  // 모달 상태 디버깅
-  useEffect(() => {
-    console.log('모달 상태 변경:', { isModalOpen, isEditMode });
-  }, [isModalOpen, isEditMode]);
-
-  // 공지사항 목록 조회
-  const loadNoticeList = async (page = 1) => {
-    setLoading(true);
-    try {
-      const params = {
-        page: page,
-        size: pageSize,
-        title: searchTitle,
-        status: searchStatus
-      };
-
-      const result = await noticeAPI.getNoticeList(params);
-
-      if (result.success) {
-        setNotices(result.data.content);
-        setTotalPages(result.data.totalPages);
-        setCurrentPage(page);
-      } else {
-        toast.callCommonToastOpen(result.message || '공지사항 목록 조회에 실패했습니다.');
-      }
-    } catch (error) {
-      toast.callCommonToastOpen('공지사항 목록 조회 실패: ' + error.message);
-    } finally {
-      setLoading(false);
+  // 공지사항 목록 조회 (Zustand Query 사용)
+  const {
+    data: noticeData,
+    isLoading: noticeLoading,
+    error: noticeError,
+    refetch: refetchNotices
+  } = useQuery(
+    ['notice-list', noticeQueryParams],
+    () => noticeAPI.getNoticeList(noticeQueryParams),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
     }
+  );
+
+  // 공지사항 생성 뮤테이션
+  const {
+    mutate: createNoticeMutation,
+    isLoading: createNoticeLoading,
+    error: createNoticeError
+  } = useMutation(
+    'create-notice',
+    (noticeData) => noticeAPI.createNotice(noticeData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('공지사항이 성공적으로 등록되었습니다.');
+          setIsModalOpen(false);
+          setFormData({ seq: '', title: '', content: '', status: 'STS001' });
+          setSelectedFiles([]);
+          refetchNotices();
+        } else {
+          toast.callCommonToastOpen(response.message || '공지사항 등록에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('공지사항 등록 실패:', error);
+        toast.callCommonToastOpen('공지사항 등록 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['notice-list']]
+    }
+  );
+
+  // 공지사항 수정 뮤테이션
+  const {
+    mutate: updateNoticeMutation,
+    isLoading: updateNoticeLoading,
+    error: updateNoticeError
+  } = useMutation(
+    'update-notice',
+    ({ seq, noticeData }) => noticeAPI.updateNotice(seq, noticeData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('공지사항이 성공적으로 수정되었습니다.');
+          setIsModalOpen(false);
+          setFormData({ seq: '', title: '', content: '', status: 'STS001' });
+          setSelectedFiles([]);
+          setExistingFiles([]);
+          refetchNotices();
+        } else {
+          toast.callCommonToastOpen(response.message || '공지사항 수정에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('공지사항 수정 실패:', error);
+        toast.callCommonToastOpen('공지사항 수정 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['notice-list']]
+    }
+  );
+
+  // 공지사항 삭제 뮤테이션
+  const {
+    mutate: deleteNoticeMutation,
+    isLoading: deleteNoticeLoading,
+    error: deleteNoticeError
+  } = useMutation(
+    'delete-notice',
+    (seq) => noticeAPI.deleteNotice(seq),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('공지사항이 성공적으로 삭제되었습니다.');
+          refetchNotices();
+        } else {
+          toast.callCommonToastOpen(response.message || '공지사항 삭제에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('공지사항 삭제 실패:', error);
+        toast.callCommonToastOpen('공지사항 삭제 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['notice-list']]
+    }
+  );
+
+  // 파일 업로드 뮤테이션
+  const {
+    mutate: uploadFileMutation,
+    isLoading: uploadFileLoading,
+    error: uploadFileError
+  } = useMutation(
+    'upload-file',
+    (fileData) => fileAPI.uploadFile(fileData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('파일이 성공적으로 업로드되었습니다.');
+        } else {
+          toast.callCommonToastOpen(response.message || '파일 업로드에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('파일 업로드 실패:', error);
+        toast.callCommonToastOpen('파일 업로드 중 오류가 발생했습니다.');
+      }
+    }
+  );
+
+  // 데이터 설정
+  useEffect(() => {
+    if (noticeData?.success) {
+      const data = noticeData.data;
+      setNotices(data.content || []);
+      setTotalPages(data.totalPages || 1);
+    }
+  }, [noticeData]);
+
+  // 로딩 상태 통합
+  const loading = noticeLoading || createNoticeLoading || updateNoticeLoading || deleteNoticeLoading || uploadFileLoading;
+
+  // 에러 메시지 생성 함수
+  const getErrorMessage = (error) => {
+    if (!error) return '';
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    if (error.type === 'response') {
+      return `서버 오류 (${error.status}): ${error.message}`;
+    } else if (error.type === 'network') {
+      return '네트워크 연결 오류가 발생했습니다.';
+    } else if (error.type === 'request') {
+      return `요청 오류: ${error.message}`;
+    }
+
+    return error.message || '알 수 없는 오류가 발생했습니다.';
   };
 
   // 검색
   const handleSearch = () => {
-    loadNoticeList(1);
+    setCurrentPage(1);
   };
 
   // 검색 조건 초기화
   const handleResetSearch = () => {
     setSearchTitle('');
     setSearchStatus('');
-    loadNoticeList(1);
+    setCurrentPage(1);
   };
 
-  // 공지사항 등록 모달 열기
+  // 페이지 변경
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // 모달 열기 (생성)
   const openCreateModal = () => {
-    console.log('openCreateModal 호출됨');
     setIsEditMode(false);
     setFormData({
       seq: '',
@@ -114,147 +240,72 @@ export default function NoticeManagementPage() {
     setSelectedFiles([]);
     setExistingFiles([]);
     setIsModalOpen(true);
-    console.log('등록 모달 열기 완료');
   };
 
-  // 공지사항 수정 모달 열기
+  // 모달 열기 (수정)
   const openEditModal = async (seq) => {
-    console.log('openEditModal 호출됨, seq:', seq);
-    setIsEditLoading(true);
+    setIsEditMode(true);
+    setFormData({
+      seq: seq,
+      title: '',
+      content: '',
+      status: 'STS001'
+    });
+    setSelectedFiles([]);
+    setExistingFiles([]);
+    setIsModalOpen(true);
+
     try {
       const result = await noticeAPI.getNoticeDetail(seq);
-      console.log('API 응답:', result);
-
       if (result.success) {
         const notice = result.data;
-        console.log('공지사항 데이터:', notice);
-
-        // 상태 설정을 한 번에 처리
         setFormData({
           seq: notice.seq,
-          title: notice.ttl,
-          content: notice.cntn,
-          status: notice.stsCd
+          title: notice.title,
+          content: notice.content,
+          status: notice.status
         });
 
-        // 작성자와 수정자 정보 로그 출력 (디버깅용)
-        console.log('공지사항 상세 정보:', {
-          seq: notice.seq,
-          title: notice.ttl,
-          regEmpId: notice.regEmpId,
-          updEmpId: notice.updEmpId,
-          regDate: notice.regDate,
-          updDate: notice.updDate
-        });
-        setSelectedFiles([]);
-
-        // 기존 첨부파일 목록 로드
-        if (notice.fileAttachYn === 'Y') {
-          await loadExistingFiles('NTI', seq);
-        } else {
-          setExistingFiles([]);
-        }
-
-        console.log('모달 열기 전 상태:', { isEditMode: true, isModalOpen: true });
-        // 모달 상태 설정
-        setIsEditMode(true);
-        setTimeout(() => {
-          setIsModalOpen(true);
-          console.log('모달 열기 완료');
-        }, 0);
-      } else {
-        toast.callCommonToastOpen('공지사항 조회 실패: ' + result.message);
+        // 기존 파일 목록 로드
+        await loadExistingFiles('NOTICE', seq);
       }
     } catch (error) {
-      console.error('openEditModal 에러:', error);
-      toast.callCommonToastOpen('공지사항 조회 실패: ' + error.message);
-    } finally {
-      setIsEditLoading(false);
+      toast.callCommonToastOpen('공지사항 상세 조회 실패: ' + error.message);
     }
   };
 
-  // 기존 첨부파일 목록 로드
+  // 기존 파일 목록 로드
   const loadExistingFiles = async (refTblCd, refPkVal) => {
     try {
-      // 백엔드 API 오류로 인해 기존 API 사용
-      const params = {
-        refTblCd: refTblCd,
-        refPkVal: refPkVal
-      };
-      const result = await fileAPI.getFileList(params);
-
+      const result = await fileAPI.getFileList({ refTblCd, refPkVal });
       if (result.success) {
-        setExistingFiles(result.data);
-      } else {
-        setExistingFiles([]);
+        setExistingFiles(result.data || []);
       }
     } catch (error) {
-      console.error('기존 첨부파일 로드 실패:', error);
-      setExistingFiles([]);
+      console.error('파일 목록 로드 실패:', error);
     }
   };
 
-  // 파일 선택 처리
+  // 파일 선택
   const handleFileSelect = (event) => {
     const files = Array.from(event.target.files);
     addFiles(files);
-    // 파일 입력 초기화
-    event.target.value = '';
   };
 
-  // 파일 추가 (중복 체크 및 유효성 검사 포함)
+  // 파일 추가
   const addFiles = (files) => {
-    const maxFileSize = 50 * 1024 * 1024; // 50MB
-    const allowedTypes = [
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-      'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'text/plain', 'application/zip', 'application/x-rar-compressed'
-    ];
+    const newFiles = files.map(file => ({
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      id: Date.now() + Math.random()
+    }));
 
-    const validFiles = [];
-    const invalidFiles = [];
-
-    files.forEach(file => {
-      // 파일 크기 검사
-      if (file.size > maxFileSize) {
-        invalidFiles.push(`${file.name} (크기 초과: ${formatFileSize(file.size)})`);
-        return;
-      }
-
-      // 파일 타입 검사
-      if (!allowedTypes.includes(file.type)) {
-        invalidFiles.push(`${file.name} (지원하지 않는 파일 형식)`);
-        return;
-      }
-
-      // 중복 검사
-      const isDuplicate = selectedFiles.some(existingFile =>
-        existingFile.name === file.name && existingFile.size === file.size
-      );
-
-      if (isDuplicate) {
-        invalidFiles.push(`${file.name} (중복 파일)`);
-        return;
-      }
-
-      validFiles.push(file);
-    });
-
-    // 유효하지 않은 파일들 알림
-    if (invalidFiles.length > 0) {
-      toast.callCommonToastOpen(`다음 파일들이 제외되었습니다:\n${invalidFiles.join('\n')}`);
-    }
-
-    // 유효한 파일들만 추가
-    if (validFiles.length > 0) {
-      setSelectedFiles(prev => [...prev, ...validFiles]);
-      toast.callCommonToastOpen(`${validFiles.length}개 파일이 추가되었습니다.`);
-    }
+    setSelectedFiles(prev => [...prev, ...newFiles]);
   };
 
-  // 드래그 앤 드롭 이벤트 핸들러
+  // 드래그 앤 드롭 처리
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -279,33 +330,16 @@ export default function NoticeManagementPage() {
 
   // 기존 파일 삭제
   const deleteExistingFile = async (fileSeq) => {
-    if (!confirm('정말로 이 파일을 삭제하시겠습니까?')) {
-      return;
-    }
-
     try {
-      console.log('파일 삭제 시도:', { fileSeq });
       const result = await fileAPI.deleteFile(fileSeq);
-      console.log('파일 삭제 결과:', result);
-
       if (result.success) {
         toast.callCommonToastOpen('파일이 삭제되었습니다.');
-        // 기존 파일 목록 새로고침
-        if (formData.seq) {
-          await loadExistingFiles('NTI', formData.seq);
-        }
+        setExistingFiles(prev => prev.filter(file => file.fileSeq !== fileSeq));
       } else {
-        toast.callCommonToastOpen('파일 삭제 실패: ' + result.message);
+        toast.callCommonToastOpen(result.message || '파일 삭제에 실패했습니다.');
       }
     } catch (error) {
-      console.error('파일 삭제 에러 상세:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url
-      });
-      toast.callCommonToastOpen('파일 삭제 실패: ' + (error.response?.data?.message || error.message));
+      toast.callCommonToastOpen('파일 삭제 실패: ' + error.message);
     }
   };
 
@@ -313,21 +347,20 @@ export default function NoticeManagementPage() {
   const downloadFile = async (fileSeq, fileName) => {
     try {
       const result = await fileAPI.downloadFile(fileSeq);
-
-      // Blob을 다운로드 링크로 변환
-      const blob = new Blob([result]);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.callCommonToastOpen('파일이 다운로드되었습니다.');
+      if (result.success) {
+        const blob = new Blob([result.data]);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        toast.callCommonToastOpen(result.message || '파일 다운로드에 실패했습니다.');
+      }
     } catch (error) {
-      console.error('파일 다운로드 실패:', error);
       toast.callCommonToastOpen('파일 다운로드 실패: ' + error.message);
     }
   };
@@ -335,178 +368,63 @@ export default function NoticeManagementPage() {
   // 파일 미리보기
   const previewFile = async (fileSeq, fileName) => {
     try {
-      const result = await fileAPI.previewFile(fileSeq);
-
-      // Blob을 미리보기 링크로 변환
-      const blob = new Blob([result]);
-      const url = window.URL.createObjectURL(blob);
-
-      // 새 창에서 열기
-      const newWindow = window.open(url, '_blank');
-      if (!newWindow) {
-        toast.callCommonToastOpen('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.');
+      const result = await fileAPI.downloadFile(fileSeq);
+      if (result.success) {
+        const blob = new Blob([result.data]);
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } else {
+        toast.callCommonToastOpen(result.message || '파일 미리보기에 실패했습니다.');
       }
-
-      // 메모리 정리
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-      }, 1000);
-
     } catch (error) {
-      console.error('파일 미리보기 실패:', error);
       toast.callCommonToastOpen('파일 미리보기 실패: ' + error.message);
     }
   };
 
-  // 파일 미리보기 가능 여부 확인
+  // 미리보기 가능한 파일 타입 확인
   const canPreview = (fileName) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    const previewableExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'pdf', 'txt'];
-    return previewableExtensions.includes(extension);
+    const ext = fileName.split('.').pop().toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'txt'].includes(ext);
   };
 
   // 공지사항 삭제
   const deleteNotice = async (seq) => {
-    if (!confirm('정말로 이 공지사항을 삭제하시겠습니까?')) {
-      return;
-    }
-
-    try {
-      const result = await noticeAPI.deleteNotice(seq);
-
-      if (result.success) {
-        toast.callCommonToastOpen('공지사항이 삭제되었습니다.');
-        loadNoticeList(currentPage);
-      } else {
-        toast.callCommonToastOpen('공지사항 삭제 실패: ' + result.message);
-      }
-    } catch (error) {
-      toast.callCommonToastOpen('공지사항 삭제 실패: ' + error.message);
+    if (window.confirm('정말로 이 공지사항을 삭제하시겠습니까?')) {
+      deleteNoticeMutation(seq);
     }
   };
 
-  // 폼 제출 처리
+  // 폼 제출
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!formData.title.trim()) {
+      toast.callCommonToastOpen('제목을 입력해주세요.');
+      return;
+    }
+
+    if (!formData.content.trim()) {
+      toast.callCommonToastOpen('내용을 입력해주세요.');
+      return;
+    }
+
     setIsEditLoading(true);
+
     try {
-      let result;
+      const noticeData = {
+        title: formData.title,
+        content: formData.content,
+        status: formData.status
+      };
 
       if (isEditMode) {
-        // 수정 모드: 공지사항 업데이트 후 첨부파일 처리
-        const formDataObj = new FormData();
-        formDataObj.append('title', formData.title);
-        formDataObj.append('content', formData.content);
-        formDataObj.append('status', formData.status);
-
-        // 선택된 파일들을 FormData에 추가
-        if (selectedFiles.length > 0) {
-          selectedFiles.forEach(file => {
-            formDataObj.append('files', file);
-          });
-        }
-
-        result = await noticeAPI.updateNotice(formData.seq, formDataObj);
-
-        // 새로운 첨부파일이 있으면 업로드 진행 상황 표시
-        if (result.success && selectedFiles.length > 0) {
-          try {
-            setIsUploading(true);
-            setUploadProgress(0);
-
-            // 업로드 진행 상황 시뮬레이션
-            const progressInterval = setInterval(() => {
-              setUploadProgress(prev => {
-                if (prev >= 90) {
-                  clearInterval(progressInterval);
-                  return 90;
-                }
-                return prev + 10;
-              });
-            }, 200);
-
-            // 파일은 이미 updateNotice에서 업로드되었으므로 별도 업로드 불필요
-            clearInterval(progressInterval);
-            setUploadProgress(100);
-
-            setTimeout(() => {
-              setIsUploading(false);
-              setUploadProgress(0);
-            }, 500);
-
-            toast.callCommonToastOpen('첨부파일이 추가되었습니다.');
-          } catch (fileError) {
-            setIsUploading(false);
-            setUploadProgress(0);
-            console.error('첨부파일 업로드 실패:', fileError);
-            toast.callCommonToastOpen('공지사항은 수정되었지만 첨부파일 업로드에 실패했습니다.');
-          }
-        }
+        updateNoticeMutation({ seq: formData.seq, noticeData });
       } else {
-        // 등록 모드: 공지사항 생성 후 첨부파일 처리
-        const formDataObj = new FormData();
-        formDataObj.append('title', formData.title);
-        formDataObj.append('content', formData.content);
-        formDataObj.append('status', formData.status);
-
-        // 선택된 파일들을 FormData에 추가
-        if (selectedFiles.length > 0) {
-          selectedFiles.forEach(file => {
-            formDataObj.append('files', file);
-          });
-        }
-
-        result = await noticeAPI.createNotice(formDataObj);
-
-        // 새로운 첨부파일이 있으면 업로드 진행 상황 표시
-        if (result.success && selectedFiles.length > 0) {
-          try {
-            const noticeSeq = result.data?.seq || result.data?.id;
-            if (noticeSeq) {
-              setIsUploading(true);
-              setUploadProgress(0);
-
-              // 업로드 진행 상황 시뮬레이션
-              const progressInterval = setInterval(() => {
-                setUploadProgress(prev => {
-                  if (prev >= 90) {
-                    clearInterval(progressInterval);
-                    return 90;
-                  }
-                  return prev + 10;
-                });
-              }, 200);
-
-              // 파일은 이미 createNotice에서 업로드되었으므로 별도 업로드 불필요 (백엔드에서 처리)
-              clearInterval(progressInterval);
-              setUploadProgress(100);
-
-              setTimeout(() => {
-                setIsUploading(false);
-                setUploadProgress(0);
-              }, 500);
-
-              toast.callCommonToastOpen('첨부파일이 추가되었습니다.');
-            }
-          } catch (fileError) {
-            setIsUploading(false);
-            setUploadProgress(0);
-            console.error('첨부파일 업로드 실패:', fileError);
-            toast.callCommonToastOpen('공지사항은 등록되었지만 첨부파일 업로드에 실패했습니다.');
-          }
-        }
-      }
-
-      if (result.success) {
-        toast.callCommonToastOpen(isEditMode ? '공지사항이 수정되었습니다.' : '공지사항이 등록되었습니다.');
-        setIsModalOpen(false);
-        loadNoticeList(currentPage);
-      } else {
-        toast.callCommonToastOpen((isEditMode ? '공지사항 수정' : '공지사항 등록') + ' 실패: ' + result.message);
+        createNoticeMutation(noticeData);
       }
     } catch (error) {
-      toast.callCommonToastOpen((isEditMode ? '공지사항 수정' : '공지사항 등록') + ' 실패: ' + error.message);
+      console.error('공지사항 저장 실패:', error);
+      toast.callCommonToastOpen('공지사항 저장 중 오류가 발생했습니다.');
     } finally {
       setIsEditLoading(false);
     }
@@ -521,87 +439,74 @@ export default function NoticeManagementPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // 파일 아이콘 가져오기
+  // 파일 아이콘 반환
   const getFileIcon = (fileName) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    switch (extension) {
+    const ext = fileName.split('.').pop().toLowerCase();
+    switch (ext) {
       case 'pdf':
-        return '📄';
+        return <FileText className="w-4 h-4 text-red-500" />;
       case 'doc':
       case 'docx':
-        return '📝';
+        return <FileText className="w-4 h-4 text-blue-500" />;
       case 'xls':
       case 'xlsx':
-        return '📊';
-      case 'ppt':
-      case 'pptx':
-        return '📈';
+        return <FileText className="w-4 h-4 text-green-500" />;
       case 'jpg':
       case 'jpeg':
       case 'png':
       case 'gif':
-        return '🖼️';
-      case 'zip':
-      case 'rar':
-        return '📦';
+        return <FileText className="w-4 h-4 text-purple-500" />;
       default:
-        return '📎';
+        return <FileText className="w-4 h-4 text-gray-500" />;
     }
   };
 
   // 페이지네이션 렌더링
   const renderPagination = () => {
-    if (totalPages <= 1) return null;
-
     const pages = [];
-    const startPage = Math.max(1, currentPage - 2);
-    const endPage = Math.min(totalPages, currentPage + 2);
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
-    // 이전 페이지 버튼
-    if (currentPage > 1) {
-      pages.push(
-        <button
-          key="prev"
-          className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50"
-          onClick={() => loadNoticeList(currentPage - 1)}
-        >
-          이전
-        </button>
-      );
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
 
-    // 페이지 번호 버튼
     for (let i = startPage; i <= endPage; i++) {
       pages.push(
         <button
           key={i}
-          className={`px-3 py-1 border rounded text-sm ${i === currentPage
-              ? 'bg-blue-500 text-white border-blue-500'
-              : 'border-gray-300 hover:bg-gray-50'
-            }`}
-          onClick={() => loadNoticeList(i)}
+          onClick={() => handlePageChange(i)}
+          className={`px-3 py-2 mx-1 rounded ${
+            currentPage === i
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
         >
           {i}
         </button>
       );
     }
 
-    // 다음 페이지 버튼
-    if (currentPage < totalPages) {
-      pages.push(
-        <button
-          key="next"
-          className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50"
-          onClick={() => loadNoticeList(currentPage + 1)}
-        >
-          다음
-        </button>
-      );
-    }
-
     return (
-      <div className="flex justify-center gap-2 mt-6">
+      <div className="flex justify-center items-center space-x-2 mt-4">
+        {currentPage > 1 && (
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            className="px-3 py-2 bg-white text-gray-700 rounded hover:bg-gray-100"
+          >
+            이전
+          </button>
+        )}
         {pages}
+        {currentPage < totalPages && (
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            className="px-3 py-2 bg-white text-gray-700 rounded hover:bg-gray-100"
+          >
+            다음
+          </button>
+        )}
       </div>
     );
   };
@@ -703,9 +608,9 @@ export default function NoticeManagementPage() {
               {notices.map((notice) => (
                 <div key={notice.seq} className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg font-semibold">{notice.ttl}</h3>
-                    <CmpBadge variant={notice.stsCd === 'STS001' ? 'default' : 'secondary'}>
-                      {notice.stsCd === 'STS001' ? '활성' : '비활성'}
+                    <h3 className="text-lg font-semibold">{notice.title}</h3>
+                    <CmpBadge variant={notice.status === 'STS001' ? 'default' : 'secondary'}>
+                      {notice.status === 'STS001' ? '활성' : '비활성'}
                     </CmpBadge>
                   </div>
 
@@ -731,7 +636,7 @@ export default function NoticeManagementPage() {
                   </div>
 
                   <p className="text-gray-700 mb-4 line-clamp-2">
-                    {notice.cntn ? (notice.cntn.length > 200 ? notice.cntn.substring(0, 200) + '...' : notice.cntn) : ''}
+                    {notice.content ? (notice.content.length > 200 ? notice.content.substring(0, 200) + '...' : notice.content) : ''}
                   </p>
 
                   {/* 추가 정보 표시 */}
@@ -763,7 +668,7 @@ export default function NoticeManagementPage() {
                     {notice.fileAttachYn === 'Y' && (
                       <button
                         className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 flex items-center gap-1"
-                        onClick={() => loadExistingFiles('NTI', notice.seq)}
+                        onClick={() => loadExistingFiles('NOTICE', notice.seq)}
                       >
                         <FileText className="w-4 h-4" />
                         첨부파일

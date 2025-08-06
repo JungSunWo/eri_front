@@ -1,7 +1,8 @@
 'use client';
 
-import { createAdmin, deleteAdmin, getAdminList, getEmployeeList, updateAdmin } from '@/app/core/services/api/adminAPI';
+import adminAPI from '@/app/core/services/api/adminAPI';
 import Board from '@/app/shared/components/Board';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
 import { alert, toast } from '@/app/shared/utils/ui_com';
 import { useEffect, useState } from 'react';
@@ -10,7 +11,6 @@ export default function AdminManagementPage() {
   const [employees, setEmployees] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [adminSearchKeyword, setAdminSearchKeyword] = useState(''); // 관리자 검색 키워드
   const [adminLevel, setAdminLevel] = useState('ADMIN'); // ADMIN, SUPER_ADMIN
@@ -31,104 +31,189 @@ export default function AdminManagementPage() {
   const [adminSortKey, setAdminSortKey] = useState('');
   const [adminSortOrder, setAdminSortOrder] = useState('asc');
 
-  // 직원 목록 조회
-  const fetchEmployees = async (page = 1, sortKey = '', sortOrder = 'asc') => {
-    try {
-      setLoading(true);
-      const params = {
-        keyword: searchKeyword,
-        page: page,
-        size: 10, // 페이지당 10개씩
-        sortBy: sortKey || undefined,
-        sortDirection: sortKey ? sortOrder : undefined
-      };
-      const response = await getEmployeeList(params);
-      if (response.success) {
-        const data = response.data;
-        setEmployees(data.content || data || []);
-        setEmployeeTotalPages(data.totalPages || 1);
-        setEmployeeTotalElements(data.totalElements || 0);
-        setEmployeePage(page);
-      } else {
-        toast.callCommonToastOpen(response.message || '직원 목록 조회에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('직원 목록 조회 실패:', error);
-      toast.callCommonToastOpen('직원 목록 조회 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+  // 직원 목록 조회 쿼리 파라미터
+  const employeeQueryParams = {
+    keyword: searchKeyword,
+    page: employeePage,
+    size: 10,
+    sortBy: employeeSortKey || undefined,
+    sortDirection: employeeSortKey ? employeeSortOrder : undefined
   };
 
-  // 관리자 목록 조회
-  const fetchAdmins = async (page = 1, sortKey = '', sortOrder = 'asc') => {
-    try {
-      setLoading(true);
-      const params = {
-        keyword: adminSearchKeyword, // 관리자 검색 키워드 추가
-        page: page,
-        size: 5, // 페이지당 5개씩
-        sortBy: sortKey || undefined,
-        sortDirection: sortKey ? sortOrder : undefined
-      };
-      const response = await getAdminList(params);
-      if (response.success) {
-        const data = response.data;
-        setAdmins(data.content || data || []);
-        setAdminTotalPages(data.totalPages || 1);
-        setAdminTotalElements(data.totalElements || 0);
-        setAdminPage(page);
-      } else {
-        toast.callCommonToastOpen(response.message || '관리자 목록 조회에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('관리자 목록 조회 실패:', error);
-      toast.callCommonToastOpen('관리자 목록 조회 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+  // 관리자 목록 조회 쿼리 파라미터
+  const adminQueryParams = {
+    keyword: adminSearchKeyword,
+    page: adminPage,
+    size: 5,
+    sortBy: adminSortKey || undefined,
+    sortDirection: adminSortKey ? adminSortOrder : undefined
   };
 
-  // 페이지 로드 시 데이터 조회
+  // 직원 목록 조회 (Zustand Query 사용)
+  const {
+    data: employeeData,
+    isLoading: employeeLoading,
+    error: employeeError,
+    refetch: refetchEmployees
+  } = useQuery(
+    ['employee-list', employeeQueryParams],
+    () => adminAPI.getEmployeeList(employeeQueryParams),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // 관리자 목록 조회 (Zustand Query 사용)
+  const {
+    data: adminData,
+    isLoading: adminLoading,
+    error: adminError,
+    refetch: refetchAdmins
+  } = useQuery(
+    ['admin-list', adminQueryParams],
+    () => adminAPI.getAdminList(adminQueryParams),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // 관리자 생성 뮤테이션
+  const {
+    mutate: createAdminMutation,
+    isLoading: createAdminLoading,
+    error: createAdminError
+  } = useMutation(
+    'create-admin',
+    (adminData) => adminAPI.createAdmin(adminData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('관리자가 성공적으로 등록되었습니다.');
+          // 폼 초기화
+          setSelectedEmployee(null);
+          setAdminLevel('ADMIN');
+          // 목록 새로고침
+          refetchEmployees();
+          refetchAdmins();
+        } else {
+          toast.callCommonToastOpen(response.message || '관리자 등록에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('관리자 등록 실패:', error);
+        toast.callCommonToastOpen('관리자 등록 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['employee-list'], ['admin-list']]
+    }
+  );
+
+  // 관리자 수정 뮤테이션
+  const {
+    mutate: updateAdminMutation,
+    isLoading: updateAdminLoading,
+    error: updateAdminError
+  } = useMutation(
+    'update-admin',
+    ({ adminId, adminData }) => adminAPI.updateAdmin(adminId, adminData),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('관리자 정보가 성공적으로 수정되었습니다.');
+          setEditingAdmin(null);
+          setEditingAdminLevel('ADMIN');
+          refetchAdmins(); // 목록 새로고침
+        } else {
+          toast.callCommonToastOpen(response.message || '관리자 수정에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('관리자 수정 실패:', error);
+        toast.callCommonToastOpen('관리자 수정 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['admin-list']]
+    }
+  );
+
+  // 관리자 삭제 뮤테이션
+  const {
+    mutate: deleteAdminMutation,
+    isLoading: deleteAdminLoading,
+    error: deleteAdminError
+  } = useMutation(
+    'delete-admin',
+    (adminId) => adminAPI.deleteAdmin(adminId),
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.callCommonToastOpen('관리자가 성공적으로 삭제되었습니다.');
+          refetchAdmins(); // 목록 새로고침
+        } else {
+          toast.callCommonToastOpen(response.message || '관리자 삭제에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('관리자 삭제 실패:', error);
+        toast.callCommonToastOpen('관리자 삭제 중 오류가 발생했습니다.');
+      },
+      invalidateQueries: [['admin-list']]
+    }
+  );
+
+  // 데이터 설정
   useEffect(() => {
-    fetchEmployees();
-    fetchAdmins();
-  }, []);
+    if (employeeData?.success) {
+      const data = employeeData.data;
+      setEmployees(data.content || data || []);
+      setEmployeeTotalPages(data.totalPages || 1);
+      setEmployeeTotalElements(data.totalElements || 0);
+    }
+  }, [employeeData]);
+
+  useEffect(() => {
+    if (adminData?.success) {
+      const data = adminData.data;
+      setAdmins(data.content || data || []);
+      setAdminTotalPages(data.totalPages || 1);
+      setAdminTotalElements(data.totalElements || 0);
+    }
+  }, [adminData]);
 
   // 직원 검색 실행
   const handleSearch = () => {
     setEmployeePage(1); // 검색 시 첫 페이지로
-    fetchEmployees(1, employeeSortKey, employeeSortOrder);
   };
 
   // 관리자 검색 실행
   const handleAdminSearch = () => {
     setAdminPage(1); // 검색 시 첫 페이지로
-    fetchAdmins(1, adminSortKey, adminSortOrder);
   };
 
   // 직원 목록 페이징 처리
   const handleEmployeePageChange = (page) => {
-    fetchEmployees(page, employeeSortKey, employeeSortOrder);
+    setEmployeePage(page);
   };
 
   // 직원 목록 정렬 처리
   const handleEmployeeSortChange = (key, order) => {
     setEmployeeSortKey(key);
     setEmployeeSortOrder(order);
-    fetchEmployees(employeePage, key, order);
+    setEmployeePage(1);
   };
 
   // 관리자 목록 페이징 처리
   const handleAdminPageChange = (page) => {
-    fetchAdmins(page, adminSortKey, adminSortOrder);
+    setAdminPage(page);
   };
 
   // 관리자 목록 정렬 처리
   const handleAdminSortChange = (key, order) => {
     setAdminSortKey(key);
     setAdminSortOrder(order);
-    fetchAdmins(adminPage, key, order);
+    setAdminPage(1);
   };
 
   // 직원 선택
@@ -137,39 +222,20 @@ export default function AdminManagementPage() {
   };
 
   // 관리자 등록
-  const handleAdminRegister = async () => {
+  const handleAdminRegister = () => {
     if (!selectedEmployee) {
       toast.callCommonToastOpen('등록할 직원을 선택해주세요.');
       return;
     }
 
-    try {
-      setLoading(true);
-      const adminData = {
-        empId: selectedEmployee.eriEmpId, // ERI직원번호로 저장
-        eriEmpId: selectedEmployee.eriEmpId,
-        adminLevel: adminLevel
-        // regEmpId는 백엔드에서 세션의 EMP_ID를 사용
-      };
+    const adminData = {
+      empId: selectedEmployee.eriEmpId, // ERI직원번호로 저장
+      eriEmpId: selectedEmployee.eriEmpId,
+      adminLevel: adminLevel
+      // regEmpId는 백엔드에서 세션의 EMP_ID를 사용
+    };
 
-      const response = await createAdmin(adminData);
-      if (response.success) {
-        toast.callCommonToastOpen('관리자가 성공적으로 등록되었습니다.');
-        // 폼 초기화
-        setSelectedEmployee(null);
-        setAdminLevel('ADMIN');
-        // 목록 새로고침
-        fetchEmployees(employeePage, employeeSortKey, employeeSortOrder);
-        fetchAdmins(adminPage, adminSortKey, adminSortOrder);
-      } else {
-        toast.callCommonToastOpen(response.message || '관리자 등록에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('관리자 등록 실패:', error);
-      toast.callCommonToastOpen('관리자 등록 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+    createAdminMutation(adminData);
   };
 
   // 관리자 수정 모드 시작
@@ -185,57 +251,49 @@ export default function AdminManagementPage() {
   };
 
   // 관리자 수정
-  const handleAdminUpdate = async () => {
+  const handleAdminUpdate = () => {
     if (!editingAdmin) return;
 
-    try {
-      setLoading(true);
-      const adminData = {
-        adminLevel: editingAdminLevel
-        // updEmpId는 백엔드에서 세션의 EMP_ID를 사용
-      };
+    const adminData = {
+      adminLevel: editingAdminLevel
+      // updEmpId는 백엔드에서 세션의 EMP_ID를 사용
+    };
 
-      const response = await updateAdmin(editingAdmin.adminId, adminData);
-      if (response.success) {
-        toast.callCommonToastOpen('관리자 정보가 성공적으로 수정되었습니다.');
-        setEditingAdmin(null);
-        setEditingAdminLevel('ADMIN');
-        fetchAdmins(adminPage, adminSortKey, adminSortOrder); // 목록 새로고침
-      } else {
-        toast.callCommonToastOpen(response.message || '관리자 수정에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('관리자 수정 실패:', error);
-      toast.callCommonToastOpen('관리자 수정 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+    updateAdminMutation({ adminId: editingAdmin.adminId, adminData });
   };
 
   // 관리자 삭제
-  const handleAdminDelete = async (adminId) => {
+  const handleAdminDelete = (adminId) => {
     // 공통 confirm 사용
     alert.ConfirmOpen('관리자 삭제', '정말로 이 관리자를 삭제하시겠습니까?', {
       okLabel: '삭제',
       cancelLabel: '취소',
-      okCallback: async () => {
-        try {
-          setLoading(true);
-          const response = await deleteAdmin(adminId);
-          if (response.success) {
-            toast.callCommonToastOpen('관리자가 성공적으로 삭제되었습니다.');
-            fetchAdmins(adminPage, adminSortKey, adminSortOrder); // 목록 새로고침
-          } else {
-            toast.callCommonToastOpen(response.message || '관리자 삭제에 실패했습니다.');
-          }
-        } catch (error) {
-          console.error('관리자 삭제 실패:', error);
-          toast.callCommonToastOpen('관리자 삭제 중 오류가 발생했습니다.');
-        } finally {
-          setLoading(false);
-        }
+      okCallback: () => {
+        deleteAdminMutation(adminId);
       }
     });
+  };
+
+  // 로딩 상태 통합
+  const loading = employeeLoading || adminLoading || createAdminLoading || updateAdminLoading || deleteAdminLoading;
+
+  // 에러 메시지 생성 함수
+  const getErrorMessage = (error) => {
+    if (!error) return '';
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    if (error.type === 'response') {
+      return `서버 오류 (${error.status}): ${error.message}`;
+    } else if (error.type === 'network') {
+      return '네트워크 연결 오류가 발생했습니다.';
+    } else if (error.type === 'request') {
+      return `요청 오류: ${error.message}`;
+    }
+
+    return error.message || '알 수 없는 오류가 발생했습니다.';
   };
 
   // 관리자 목록 컬럼 정의
@@ -388,6 +446,20 @@ export default function AdminManagementPage() {
               관리자 등록 및 관리자 목록을 조회하고 관리합니다.
             </p>
           </div>
+
+          {/* 에러 메시지 표시 */}
+          {(employeeError || adminError || createAdminError || updateAdminError || deleteAdminError) && (
+            <div className="mb-6 p-4 bg-red-50 rounded border border-red-200">
+              <div className="font-medium text-red-800 mb-1">오류가 발생했습니다:</div>
+              <div className="text-sm text-red-600">
+                {employeeError && <div>직원 목록: {getErrorMessage(employeeError)}</div>}
+                {adminError && <div>관리자 목록: {getErrorMessage(adminError)}</div>}
+                {createAdminError && <div>관리자 등록: {getErrorMessage(createAdminError)}</div>}
+                {updateAdminError && <div>관리자 수정: {getErrorMessage(updateAdminError)}</div>}
+                {deleteAdminError && <div>관리자 삭제: {getErrorMessage(deleteAdminError)}</div>}
+              </div>
+            </div>
+          )}
 
           {/* 상단 영역: 관리자 목록과 관리자 등록 */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">

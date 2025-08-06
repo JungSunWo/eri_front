@@ -1,7 +1,7 @@
 'use client';
 
-import { useConsultationPopupStore } from '@/app/core/slices/consultationPopupStore';
-import { CmpButton } from '@/app/shared/components/ui';
+import { CmpButton } from '@/components/ui';
+import { useConsultationPopupStore } from '@/slices/consultationPopupStore';
 
 const ConsultationButton = ({
     children = "상담 신청",

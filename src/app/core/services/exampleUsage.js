@@ -1,5 +1,5 @@
-import { apiClient } from './api';
-import { useInfiniteQuery, useLazyQuery, useMutation, useQuery } from './useQuery';
+import { useInfiniteQuery, useLazyQuery, useMutation, useQuery } from '@/app/shared/hooks/useQuery';
+import { apiClient } from './apiClient';
 
 // API 함수들
 const userAPI = {

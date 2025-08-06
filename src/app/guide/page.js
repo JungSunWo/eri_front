@@ -18,6 +18,80 @@ import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel
 import { BarChart3, Bell, ChevronDown, ClipboardList, Cloud, Code, Database, Info, Layers, List, Settings, Square, Table } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+// 편집 가능한 셀 컴포넌트들
+const EditableCell = ({ getValue, row, column, table }) => {
+  const initialValue = getValue();
+  const [value, setValue] = useState(initialValue);
+
+  const onBlur = () => {
+    table.options.meta?.updateData(row.index, column.id, value);
+  };
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
+  return (
+    <input
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      onBlur={onBlur}
+      className="w-full px-2 py-1 border rounded text-sm"
+    />
+  );
+};
+
+const EditableSelectCell = ({ getValue, row, column, table, options }) => {
+  const initialValue = getValue();
+  const [value, setValue] = useState(initialValue);
+
+  const onBlur = () => {
+    table.options.meta?.updateData(row.index, column.id, value);
+  };
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
+  return (
+    <select
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      onBlur={onBlur}
+      className="w-full px-2 py-1 border rounded text-sm"
+    >
+      {options.map(option => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+};
+
+const EditableNumberCell = ({ getValue, row, column, table }) => {
+  const initialValue = getValue();
+  const [value, setValue] = useState(initialValue);
+
+  const onBlur = () => {
+    table.options.meta?.updateData(row.index, column.id, value);
+  };
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
+  return (
+    <input
+      type="number"
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      onBlur={onBlur}
+      className="w-full px-2 py-1 border rounded text-sm"
+    />
+  );
+};
+
 export default function GuidePage() {
   const setMoveTo = usePageMoveStore((state) => state.setMoveTo);
   const setRefresh = usePageMoveStore((state) => state.setRefresh);
@@ -443,25 +517,7 @@ export default function GuidePage() {
       enableSorting: true,
       enableColumnFilter: true,
       cell: ({ getValue, row, column, table }) => {
-        const initialValue = getValue();
-        const [value, setValue] = useState(initialValue);
-
-        const onBlur = () => {
-          table.options.meta?.updateData(row.index, column.id, value);
-        };
-
-        useEffect(() => {
-          setValue(initialValue);
-        }, [initialValue]);
-
-        return (
-          <input
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            onBlur={onBlur}
-            className="w-full px-2 py-1 border rounded text-sm"
-          />
-        );
+        return <EditableCell getValue={getValue} row={row} column={column} table={table} />;
       },
     },
     {
@@ -471,25 +527,7 @@ export default function GuidePage() {
       enableSorting: true,
       enableColumnFilter: true,
       cell: ({ getValue, row, column, table }) => {
-        const initialValue = getValue();
-        const [value, setValue] = useState(initialValue);
-
-        const onBlur = () => {
-          table.options.meta?.updateData(row.index, column.id, value);
-        };
-
-        useEffect(() => {
-          setValue(initialValue);
-        }, [initialValue]);
-
-        return (
-          <input
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            onBlur={onBlur}
-            className="w-full px-2 py-1 border rounded text-sm"
-          />
-        );
+        return <EditableCell getValue={getValue} row={row} column={column} table={table} />;
       },
     },
     {
@@ -499,30 +537,18 @@ export default function GuidePage() {
       enableSorting: true,
       enableColumnFilter: true,
       cell: ({ getValue, row, column, table }) => {
-        const initialValue = getValue();
-        const [value, setValue] = useState(initialValue);
-
-        const onBlur = () => {
-          table.options.meta?.updateData(row.index, column.id, value);
-        };
-
-        useEffect(() => {
-          setValue(initialValue);
-        }, [initialValue]);
-
-        return (
-          <select
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            onBlur={onBlur}
-            className="w-full px-2 py-1 border rounded text-sm"
-          >
-            <option value="개발팀">개발팀</option>
-            <option value="디자인팀">디자인팀</option>
-            <option value="기획팀">기획팀</option>
-            <option value="마케팅팀">마케팅팀</option>
-          </select>
-        );
+        return <EditableSelectCell
+          getValue={getValue}
+          row={row}
+          column={column}
+          table={table}
+          options={[
+            { value: '개발팀', label: '개발팀' },
+            { value: '디자인팀', label: '디자인팀' },
+            { value: '기획팀', label: '기획팀' },
+            { value: '마케팅팀', label: '마케팅팀' }
+          ]}
+        />;
       },
     },
     {
@@ -532,28 +558,16 @@ export default function GuidePage() {
       enableSorting: true,
       enableColumnFilter: true,
       cell: ({ getValue, row, column, table }) => {
-        const initialValue = getValue();
-        const [value, setValue] = useState(initialValue);
-
-        const onBlur = () => {
-          table.options.meta?.updateData(row.index, column.id, value);
-        };
-
-        useEffect(() => {
-          setValue(initialValue);
-        }, [initialValue]);
-
-        return (
-          <select
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            onBlur={onBlur}
-            className="w-full px-2 py-1 border rounded text-sm"
-          >
-            <option value="활성">활성</option>
-            <option value="비활성">비활성</option>
-          </select>
-        );
+        return <EditableSelectCell
+          getValue={getValue}
+          row={row}
+          column={column}
+          table={table}
+          options={[
+            { value: '활성', label: '활성' },
+            { value: '비활성', label: '비활성' }
+          ]}
+        />;
       },
     },
     {
@@ -563,26 +577,7 @@ export default function GuidePage() {
       enableSorting: true,
       enableColumnFilter: true,
       cell: ({ getValue, row, column, table }) => {
-        const initialValue = getValue();
-        const [value, setValue] = useState(initialValue);
-
-        const onBlur = () => {
-          table.options.meta?.updateData(row.index, column.id, value);
-        };
-
-        useEffect(() => {
-          setValue(initialValue);
-        }, [initialValue]);
-
-        return (
-          <input
-            type="number"
-            value={value}
-            onChange={e => setValue(Number(e.target.value))}
-            onBlur={onBlur}
-            className="w-full px-2 py-1 border rounded text-sm"
-          />
-        );
+        return <EditableNumberCell getValue={getValue} row={row} column={column} table={table} />;
       },
     },
     {

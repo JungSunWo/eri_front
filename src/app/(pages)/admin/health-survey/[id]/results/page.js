@@ -3,6 +3,7 @@
 import { surveyAPI } from '@/app/core/services/api';
 import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
 import { CmpButton } from '@/app/shared/components/ui';
+import { useMutation, useQuery } from '@/app/shared/hooks/useQuery';
 import PageWrapper from '@/app/shared/layouts/PageWrapper';
 import { toast } from '@/app/shared/utils/ui_com';
 import {
@@ -21,7 +22,6 @@ export default function SurveyResultsPage() {
   const surveySeq = params.id;
 
   // 상태 관리
-  const [loading, setLoading] = useState(true);
   const [survey, setSurvey] = useState(null);
   const [results, setResults] = useState([]);
   const [statistics, setStatistics] = useState({
@@ -31,47 +31,94 @@ export default function SurveyResultsPage() {
     questionStats: []
   });
 
-  // 설문조사 상세 조회
-  const loadSurveyDetail = async () => {
-    setLoading(true);
-    try {
-      const response = await surveyAPI.getSurveyDetail(surveySeq);
-      if (response.success) {
-        setSurvey(response.data);
-      } else {
-        toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
-        setMoveTo('/admin/health-survey');
+  // 설문조사 상세 조회 쿼리
+  const {
+    data: surveyData,
+    isLoading: surveyLoading,
+    error: surveyError,
+    refetch: refetchSurvey
+  } = useQuery(
+    ['survey-detail', surveySeq],
+    () => surveyAPI.getSurveyDetail(surveySeq),
+    {
+      cacheTime: 5 * 60 * 1000, // 5분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+      enabled: !!surveySeq
+    }
+  );
+
+  // 설문조사 결과 조회 쿼리
+  const {
+    data: resultsData,
+    isLoading: resultsLoading,
+    error: resultsError,
+    refetch: refetchResults
+  } = useQuery(
+    ['survey-results', surveySeq],
+    () => surveyAPI.getSurveyResults(surveySeq),
+    {
+      cacheTime: 2 * 60 * 1000, // 2분 캐시
+      retry: 3,
+      refetchOnWindowFocus: false,
+      enabled: !!surveySeq
+    }
+  );
+
+  // 결과 내보내기 뮤테이션
+  const {
+    mutate: exportResultsMutation,
+    isLoading: exportResultsLoading,
+    error: exportResultsError
+  } = useMutation(
+    'export-survey-results',
+    (format) => surveyAPI.downloadSurveyResults(surveySeq, format),
+    {
+      onSuccess: (data) => {
+        // 파일 다운로드 처리
+        const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `survey-results-${surveySeq}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast.callCommonToastOpen('결과가 성공적으로 내보내기되었습니다.');
+      },
+      onError: (error) => {
+        console.error('결과 내보내기 실패:', error);
+        toast.callCommonToastOpen('결과 내보내기 중 오류가 발생했습니다.');
       }
-    } catch (error) {
-      console.error('설문조사 상세 조회 오류:', error);
+    }
+  );
+
+  // 데이터 설정
+  useEffect(() => {
+    if (surveyData?.success) {
+      setSurvey(surveyData.data);
+    } else if (surveyData && !surveyData.success) {
+      console.error('설문조사 상세 조회 실패:', surveyData.message);
       toast.callCommonToastOpen('설문조사 정보를 불러오는데 실패했습니다.');
       setMoveTo('/admin/health-survey');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [surveyData, setMoveTo]);
 
-  // 설문조사 결과 조회
-  const loadSurveyResults = async () => {
-    try {
-      const response = await surveyAPI.getSurveyResults(surveySeq);
-      if (response.success) {
-        console.log('설문조사 결과 응답:', response.data);
-        setResults(response.data.responses || []);
-        setStatistics(response.data.statistics || {
-          totalResponses: 0,
-          responseRate: 0,
-          averageScore: 0,
-          questionStats: []
-        });
-      } else {
-        toast.callCommonToastOpen('설문조사 결과를 불러오는데 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('설문조사 결과 조회 오류:', error);
+  useEffect(() => {
+    if (resultsData?.success) {
+      console.log('설문조사 결과 응답:', resultsData.data);
+      setResults(resultsData.data.responses || []);
+      setStatistics(resultsData.data.statistics || {
+        totalResponses: 0,
+        responseRate: 0,
+        averageScore: 0,
+        questionStats: []
+      });
+    } else if (resultsData && !resultsData.success) {
       toast.callCommonToastOpen('설문조사 결과를 불러오는데 실패했습니다.');
     }
-  };
+  }, [resultsData]);
 
   // 뒤로가기
   const goBack = () => {
@@ -80,8 +127,7 @@ export default function SurveyResultsPage() {
 
   // 결과 내보내기
   const exportResults = () => {
-    // TODO: 결과 내보내기 기능 구현
-    toast.callCommonToastOpen('결과 내보내기 기능은 준비 중입니다.');
+    exportResultsMutation('excel');
   };
 
   // 날짜 포맷팅
@@ -90,13 +136,27 @@ export default function SurveyResultsPage() {
     return new Date(dateString).toLocaleDateString('ko-KR');
   };
 
-  // 컴포넌트 마운트 시 데이터 로드
-  useEffect(() => {
-    if (surveySeq) {
-      loadSurveyDetail();
-      loadSurveyResults();
+  // 에러 메시지 생성 함수
+  const getErrorMessage = (error) => {
+    if (!error) return '';
+
+    if (typeof error === 'string') {
+      return error;
     }
-  }, [surveySeq]);
+
+    if (error.type === 'response') {
+      return `서버 오류 (${error.status}): ${error.message}`;
+    } else if (error.type === 'network') {
+      return '네트워크 연결 오류가 발생했습니다.';
+    } else if (error.type === 'request') {
+      return `요청 오류: ${error.message}`;
+    }
+
+    return error.message || '알 수 없는 오류가 발생했습니다.';
+  };
+
+  // 로딩 상태 통합
+  const loading = surveyLoading || resultsLoading || exportResultsLoading;
 
   if (loading) {
     return (
@@ -104,6 +164,31 @@ export default function SurveyResultsPage() {
         <div className="flex items-center justify-center min-h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <p className="ml-2 text-gray-600">로딩 중...</p>
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  if (surveyError || resultsError) {
+    return (
+      <PageWrapper>
+        <div className="mb-6 p-4 bg-red-50 rounded border border-red-200">
+          <div className="font-medium text-red-800 mb-1">오류가 발생했습니다:</div>
+          <div className="text-sm text-red-600">
+            {surveyError && <div>설문조사 정보: {getErrorMessage(surveyError)}</div>}
+            {resultsError && <div>설문조사 결과: {getErrorMessage(resultsError)}</div>}
+          </div>
+        </div>
+        <div className="text-center py-8">
+          <p className="text-gray-500">데이터를 불러오는데 실패했습니다.</p>
+          <CmpButton
+            onClick={goBack}
+            variant="primary"
+            size="md"
+            className="mt-4"
+          >
+            목록으로 돌아가기
+          </CmpButton>
         </div>
       </PageWrapper>
     );
@@ -119,6 +204,7 @@ export default function SurveyResultsPage() {
               onClick={goBack}
               variant="text"
               size="md"
+              disabled={loading}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               뒤로가기
@@ -132,9 +218,10 @@ export default function SurveyResultsPage() {
             onClick={exportResults}
             variant="secondary"
             size="md"
+            disabled={loading}
           >
             <Download className="w-4 h-4 mr-2" />
-            결과 내보내기
+            {exportResultsLoading ? '내보내는 중...' : '결과 내보내기'}
           </CmpButton>
         </div>
 

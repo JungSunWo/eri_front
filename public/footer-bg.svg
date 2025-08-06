@@ -1,0 +1,14 @@
+<svg width="1200" height="120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="accentLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2980b9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Main background - solid dark gray with rounded top corners -->
+  <rect width="1200" height="120" fill="#343a40" rx="8" ry="8"/>
+
+  <!-- Bottom accent line -->
+  <rect x="0" y="117" width="1200" height="3" fill="url(#accentLine)"/>
+</svg>

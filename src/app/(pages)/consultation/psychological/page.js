@@ -1,6 +1,6 @@
 'use client';
 
-import { setMoveTo } from '@/app/core/slices/pageMoveStore';
+import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
 import CmpButton from '@/app/shared/components/button/cmp_button';
 import CmpInput from '@/app/shared/components/ui/CmpInput';
 import CmpSelect from '@/app/shared/components/ui/CmpSelect';
@@ -9,6 +9,7 @@ import { toast } from '@/app/shared/utils/ui_com';
 import { useState } from 'react';
 
 export default function PsychologicalConsultationPage() {
+  const setMoveTo = usePageMoveStore((state) => state.setMoveTo);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',

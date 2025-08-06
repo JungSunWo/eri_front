@@ -1,10 +1,10 @@
 'use client';
 
-import { fileAPI, noticeAPI } from '@/app/core/services/api';
-import { useQuery } from '@/app/core/services/useQuery';
-import { usePageMoveStore } from '@/app/core/slices/pageMoveStore';
-import EmpNameDisplay from '@/app/shared/components/EmpNameDisplay';
-import PageWrapper from '@/app/shared/layouts/PageWrapper';
+import EmpNameDisplay from '@/components/EmpNameDisplay';
+import { useQuery } from '@/hooks/useQuery';
+import PageWrapper from '@/layouts/PageWrapper';
+import { fileAPI, noticeAPI } from '@/services/api';
+import { usePageMoveStore } from '@/slices/pageMoveStore';
 import { Download, FileText, Paperclip } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
